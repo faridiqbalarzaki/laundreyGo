@@ -1,0 +1,190 @@
+:root {
+  /* Palet Warna Sistem Desain Fresh Aqua (Kontras Lolos WCAG AA >= 4.5:1) */
+  --bg-latar: #f1f9fa;
+  --bg-tint: #e6f6f9;
+  --aqua-100: #cffafe;
+  --aksen: #22d3ee;
+  --aqua-600: #0891b2;
+  --utama: #0e7490;
+  --hover: #155e75;
+  --teks: #0b2530;
+  --teks-muted: #47626e; /* Diperkuat dari #5B7480 agar rasio kontras di atas #E6F6F9 > 5.2:1 */
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --border: #d5e8ec;
+
+  /* Warna Status Semantik (Light Mode) */
+  --bg-lunas: #d1fae5;
+  --txt-lunas: #065f46;
+  --bg-kilat: #fef3c7;
+  --txt-kilat: #92400e;
+  --bg-terlambat: #ffe4e6;
+  --txt-terlambat: #9f1239;
+  --bg-disetrika: #e0e7ff;
+  --txt-disetrika: #3730a3;
+  --bg-dicuci: #cffafe;
+  --txt-dicuci: #0e7490;
+  --bg-diterima: #e2e8f0;
+  --txt-diterima: #334155;
+  --bg-batal: #f1f5f9;
+  --txt-batal: #64748b;
+  --coral-accent: #f43f5e;
+  --mint-accent: #10b981;
+
+  /* Spesifikasi Bentuk & Jarak Bento */
+  --radius-card: 20px;
+  --radius-btn: 12px;
+  --radius-pill: 9999px;
+  --gap-bento: 16px;
+  --pad-card: 22px;
+  --sidebar-w: 248px;
+  --drawer-w: 420px;
+  --touch-target: 48px;
+  --shadow-card: 0 2px 10px rgba(11, 37, 48, 0.04);
+  --shadow-lg: 0 16px 40px rgba(11, 37, 48, 0.14);
+}
+
+/* Dark Mode "Night Shift" (§5: Deep Ocean #0F172A, Card #162033, Aqua-Glow #2DD4BF) */
+body.dark {
+  --bg-latar: #0f172a;
+  --bg-tint: #1e293b;
+  --aqua-100: #134e4a;
+  --aksen: #2dd4bf;
+  --aqua-600: #14b8a6;
+  --utama: #0d9488;
+  --hover: #0f766e;
+  --teks: #f1f5f9;
+  --teks-muted: #94a3b8;
+  --surface: #162033;
+  --surface-elevated: #1e293b;
+  --border: #26354d;
+
+  /* Badge Status Terbaca Jelas di Dark Mode */
+  --bg-lunas: rgba(16, 185, 129, 0.18);
+  --txt-lunas: #6ee7b7;
+  --bg-kilat: rgba(245, 158, 11, 0.2);
+  --txt-kilat: #fcd34d;
+  --bg-terlambat: rgba(244, 63, 94, 0.2);
+  --txt-terlambat: #fda4af;
+  --bg-disetrika: rgba(99, 102, 241, 0.22);
+  --txt-disetrika: #c7d2fe;
+  --bg-dicuci: rgba(45, 212, 191, 0.18);
+  --txt-dicuci: #5eead4;
+  --bg-diterima: rgba(148, 163, 184, 0.2);
+  --txt-diterima: #cbd5e1;
+  --bg-batal: rgba(100, 116, 139, 0.2);
+  --txt-batal: #94a3b8;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    "Plus Jakarta Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  background-color: var(--bg-latar);
+  color: var(--teks);
+  min-height: 100vh;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.mono {
+  font-family: "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fokus Ring Aksesibilitas Jelas */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--aksen);
+  outline-offset: 2px;
+}
+
+/* Micro-interactions & Animasi */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseCoral {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.98);
+  }
+}
+
+.animate-stagger > * {
+  animation: fadeInUp 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.animate-stagger > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+.animate-stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.animate-stagger > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+.animate-stagger > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+.animate-stagger > *:nth-child(6) {
+  animation-delay: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Aturan Cetak (@media print) untuk Nota 58/80mm & Label 58x40mm */
+.print-only {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}

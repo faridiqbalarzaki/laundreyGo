@@ -1,0 +1,6 @@
+Options -Indexes
+RewriteEngine On
+# File/folder statis (assets) dilayani langsung; sisanya ke Front Controller.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
