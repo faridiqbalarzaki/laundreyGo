@@ -41,11 +41,16 @@ foreach ($chartData as $cd) {
         <div class="bento-card is-hero-aqua">
             <div class="bento-card-head">
                 <span class="bento-card-title">Pemasukan lunas (Hari ini)</span>
-                <span class="semantic-pill is-success">&#9650; +14,2%</span>
+                <?php 
+                $growth = (float)($metrics['growth_percent'] ?? 0); 
+                $growthClass = $growth >= 0 ? 'is-success' : 'is-warn';
+                $growthSign = $growth >= 0 ? '&#9650; +' : '&#9660; ';
+                ?>
+                <span class="semantic-pill <?= $growthClass ?>"><?= $growthSign ?><?= number_format(abs($growth), 1, ',', '.') ?>%</span>
             </div>
             <div class="dash-huge-amount num-tabular"><?= \App\Core\Helper::rupiah($omzet) ?></div>
             <div class="dash-sub-meta num-tabular">
-                Laba bersih <strong><?= \App\Core\Helper::rupiah($netProfit) ?></strong> &bull; Efisiensi kas 94%
+                Laba bersih <strong><?= \App\Core\Helper::rupiah($netProfit) ?></strong> &bull; Efisiensi kas <?= (int)($cashEfficiency ?? 100) ?>%
             </div>
             <div class="area-sparkline-box" style="margin-top: auto; padding-top: 8px;">
                 <svg viewBox="0 0 300 70" preserveAspectRatio="none" style="width: 100%; height: 58px; overflow: visible;">
@@ -55,9 +60,9 @@ foreach ($chartData as $cd) {
                             <stop offset="100%" stop-color="#0284c7" stop-opacity="0.0"/>
                         </linearGradient>
                     </defs>
-                    <polygon points="0,55 30,50 60,42 90,48 120,35 150,38 180,24 210,30 240,16 270,22 300,10 300,70 0,70" fill="url(#aquaAreaGrad)"/>
-                    <polyline points="0,55 30,50 60,42 90,48 120,35 150,38 180,24 210,30 240,16 270,22 300,10" fill="none" stroke="#0284c7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="300" cy="10" r="4.5" fill="#0284c7" stroke="#ffffff" stroke-width="2"/>
+                    <polygon points="<?= htmlspecialchars($sparkPolygon ?? '0,55 300,55 300,70 0,70') ?>" fill="url(#aquaAreaGrad)"/>
+                    <polyline points="<?= htmlspecialchars($sparkPolyline ?? '0,55 300,55') ?>" fill="none" stroke="#0284c7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="<?= htmlspecialchars((string)($lastSparkX ?? 300)) ?>" cy="<?= htmlspecialchars((string)($lastSparkY ?? 55)) ?>" r="4.5" fill="#0284c7" stroke="#ffffff" stroke-width="2"/>
                 </svg>
             </div>
         </div>
@@ -79,9 +84,9 @@ foreach ($chartData as $cd) {
                 <div style="position: relative; width: 68px; height: 68px; flex-shrink: 0;">
                     <svg width="68" height="68" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
                         <circle cx="18" cy="18" r="14" fill="none" stroke="var(--surface-muted)" stroke-width="4.5"/>
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#0284c7" stroke-width="4.5" stroke-dasharray="68, 100" stroke-linecap="round"/>
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#0284c7" stroke-width="4.5" stroke-dasharray="<?= (int)($completedRatio ?? 0) ?>, 100" stroke-linecap="round"/>
                     </svg>
-                    <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; color: var(--ink);">82%</span>
+                    <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; color: var(--ink);"><?= (int)($completedRatio ?? 0) ?>%</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
                     <div style="display: flex; align-items: baseline; gap: 6px;">
@@ -104,7 +109,7 @@ foreach ($chartData as $cd) {
             <div class="outlet-signature-card" style="background: var(--primary-gradient); border-radius: 14px; padding: 12px 14px; color: #fff; display: flex; flex-direction: column; gap: 6px;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <span style="font-size: 0.76rem; font-weight: 800;">Adi Laundry &bull; Karangploso</span>
-                    <span class="outlet-card-pill" style="background: rgba(255,255,255,0.22); font-size: 0.65rem; padding: 2px 7px; border-radius: 9999px; font-weight: 700;">100% Tunai</span>
+                    <span class="outlet-card-pill" style="background: rgba(255,255,255,0.22); font-size: 0.65rem; padding: 2px 7px; border-radius: 9999px; font-weight: 700;"><?= (int)($cashPercent ?? 100) ?>% Tunai</span>
                 </div>
                 <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
                     <span class="num-tabular" style="font-size: 1.35rem; font-weight: 800; line-height: 1.15;"><?= $totalOrdersCount ?> Pesanan</span>

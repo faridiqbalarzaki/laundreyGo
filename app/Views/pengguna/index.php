@@ -78,7 +78,13 @@ foreach ($users as $u) {
                                                 <?= $isActive ? 'Nonaktifkan' : 'Aktifkan' ?>
                                             </button>
                                         </form>
-                                        <form action="<?= \App\Core\Helper::url('pengguna', ['action' => 'delete']) ?>" method="POST" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun ini? Akun dengan histori transaksi sebaiknya dinonaktifkan.')">
+                                        <form action="<?= \App\Core\Helper::url('pengguna', ['action' => 'delete']) ?>" method="POST" style="display:inline;"
+                                            data-confirm="true"
+                                            data-confirm-title="Hapus Akun Pengguna?"
+                                            data-confirm-message="Akun pengguna ini akan dihapus. Jika memiliki histori transaksi, disarankan untuk dinonaktifkan saja."
+                                            data-confirm-badge="<?= htmlspecialchars($u['nama_anggota']) ?> &bull; <?= htmlspecialchars($u['username']) ?>"
+                                            data-confirm-btn="Ya, Hapus Akun"
+                                            data-confirm-type="danger">
                                             <input type="hidden" name="id_anggota" value="<?= $u['id_anggota'] ?>">
                                             <button type="submit" class="btn btn-secondary" style="height: 28px; padding: 0 8px; font-size: 0.74rem; color: var(--danger);">
                                                 Hapus

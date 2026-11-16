@@ -25,6 +25,17 @@
                 <span class="badge-rak" id="drawerRakBadge" style="display:none;">Rak: -</span>
             </div>
 
+            <!-- Status Workflow Actions Card (Undur / Maju Tahapan Alur Cucian) -->
+            <div class="drawer-section-card" id="drawerActionSection" style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px 16px; border-radius: 12px; margin-bottom: 14px;">
+                <div class="section-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #0F172A;">Tahapan Alur Pengerjaan:</span>
+                    <span id="drawerStatusDesc" style="font-size: 0.72rem; font-weight: 600; color: #0284C7;"></span>
+                </div>
+                <div id="drawerStatusActionButtons" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <!-- Diisi dinamis via renderDrawerData() -->
+                </div>
+            </div>
+
             <!-- Customer Info Box -->
             <div class="drawer-section-card">
                 <div class="section-title">Data Pelanggan</div>

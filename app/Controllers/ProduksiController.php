@@ -109,14 +109,17 @@ class ProduksiController {
             'antrean' => 'Antrean',
             'dicuci' => 'Dicuci',
             'disetrika' => 'Disetrika',
-            'siap_diambil' => 'Siap Diambil'
+            'siap_diambil' => 'Siap Diambil',
+            'siap diambil' => 'Siap Diambil'
         ];
 
         $dbStatus = $statusMap[strtolower($targetStatus)] ?? 'Antrean';
+        $clearRak = in_array($dbStatus, ['Antrean', 'Dicuci', 'Disetrika'], true) ? 'clear' : null;
+        $catatan = !empty($_POST['catatan']) ? Helper::sanitize($_POST['catatan']) : "Pengunduran status pengerjaan ke {$dbStatus} oleh petugas";
 
         if ($id && $dbStatus) {
-            Pesanan::updateStatus($id, $dbStatus, Auth::id(), 'Pembatalan status pengerjaan oleh petugas');
-            LogAktivitas::log('Lantai Produksi', "Pesanan {$id} dikembalikan ke {$dbStatus}", Auth::id());
+            Pesanan::updateStatus($id, $dbStatus, Auth::id(), $catatan, $clearRak);
+            LogAktivitas::log('Lantai Produksi', "Pesanan {$id} diundurkan ke status {$dbStatus}", Auth::id());
 
             if ($isAjax) {
                 Helper::jsonResponse([

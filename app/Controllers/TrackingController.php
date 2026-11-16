@@ -7,34 +7,36 @@ use App\Models\Pesanan;
 
 class TrackingController {
     public function index(): void {
-        $keyword = Helper::sanitize($_GET['nota'] ?? '');
+        $rawNota = trim($_GET['nota'] ?? '');
+        $keyword = strtoupper(strip_tags($rawNota));
         $order = null;
         $error = null;
+        $errorType = null;
 
         if (!empty($keyword)) {
-            // Cek langsung berdasarkan invoice
-            $order = Pesanan::findWithDetails($keyword);
-
-            if (!$order) {
-                // Jika tidak ketemu, coba cari like
-                $candidates = Pesanan::all(null, $keyword);
-                if (!empty($candidates)) {
-                    $order = Pesanan::findWithDetails($candidates[0]['id_pesanan']);
-                }
-            }
-
-            if (!$order) {
-                $error = "Nomor nota '{$keyword}' tidak ditemukan. Pastikan nomor nota yang Anda masukkan sesuai.";
+            // Validasi format nomor nota standar LaundryGo (LG-YYMMDD-XXX)
+            if (!Helper::isValidInvoice($keyword)) {
+                $error = "Format nomor nota '{$keyword}' tidak sesuai standar. Contoh format yang benar: LG-261114-001.";
+                $errorType = 'invalid_format';
             } else {
-                $order['sla_info'] = Helper::calculateSla($order['tanggal_keluar']);
+                // Pencarian exact hanya berdasarkan ID Invoice resmi (mencegah data leak dan SQL Injection)
+                $order = Pesanan::findWithDetails($keyword);
+
+                if (!$order) {
+                    $error = "Nomor nota '{$keyword}' tidak ditemukan di sistem. Pastikan nomor nota sesuai dengan yang tertera pada struk fisik kasir Anda.";
+                    $errorType = 'not_found';
+                } else {
+                    $order['sla_info'] = Helper::calculateSla($order['tanggal_keluar']);
+                }
             }
         }
 
         View::render('tracking/index', [
-            'title'   => 'Lacak Status Cucian - LaundryGo',
-            'keyword' => $keyword,
-            'order'   => $order,
-            'error'   => $error
+            'title'     => 'Lacak Status Cucian - LaundryGo Aqua',
+            'keyword'   => $keyword,
+            'order'     => $order,
+            'error'     => $error,
+            'errorType' => $errorType
         ], 'blank');
     }
 }

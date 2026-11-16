@@ -22,14 +22,28 @@ class PelangganController {
     public function store(): void {
         Auth::requireRole(['Admin', 'Kasir']);
 
-        $nama = Helper::sanitize($_POST['nama_pelanggan'] ?? '');
-        $telp = Helper::sanitize($_POST['no_telepon'] ?? '');
-        $alamat = Helper::sanitize($_POST['alamat'] ?? '');
+        $nama = trim(strip_tags($_POST['nama_pelanggan'] ?? ''));
+        $rawTelp = trim($_POST['no_telepon'] ?? '');
+        $alamat = trim(strip_tags($_POST['alamat'] ?? ''));
 
-        if (empty($nama) || empty($telp)) {
+        if (empty($nama) || empty($rawTelp)) {
             Helper::setFlash('error', 'Nama dan nomor telepon pelanggan wajib diisi.');
             Helper::redirect(Helper::url('pelanggan'));
         }
+
+        // Validasi format nama: minimal 2 karakter, hanya huruf, spasi, titik, apostrof, strip
+        if (mb_strlen($nama) < 2 || mb_strlen($nama) > 100 || !preg_match('/^[a-zA-Z\s\.\'\-]+$/u', $nama)) {
+            Helper::setFlash('error', 'Nama pelanggan tidak valid. Hanya boleh berupa huruf, spasi, titik, atau tanda hubung (min 2 karakter).');
+            Helper::redirect(Helper::url('pelanggan'));
+        }
+
+        // Validasi nomor telepon Indonesia (+62 / 62 / 08, 10-15 digit)
+        if (!Helper::isValidPhone($rawTelp)) {
+            Helper::setFlash('error', 'Nomor telepon tidak valid. Masukkan nomor HP Indonesia yang benar (contoh: 08123456789 atau +628123456789).');
+            Helper::redirect(Helper::url('pelanggan'));
+        }
+
+        $telp = Helper::normalizePhone($rawTelp);
 
         $id = Pelanggan::create([
             'nama_pelanggan' => $nama,
@@ -46,14 +60,28 @@ class PelangganController {
         Auth::requireRole(['Admin', 'Kasir']);
 
         $id = Helper::sanitize($_POST['id_pelanggan'] ?? '');
-        $nama = Helper::sanitize($_POST['nama_pelanggan'] ?? '');
-        $telp = Helper::sanitize($_POST['no_telepon'] ?? '');
-        $alamat = Helper::sanitize($_POST['alamat'] ?? '');
+        $nama = trim(strip_tags($_POST['nama_pelanggan'] ?? ''));
+        $rawTelp = trim($_POST['no_telepon'] ?? '');
+        $alamat = trim(strip_tags($_POST['alamat'] ?? ''));
 
-        if (empty($id) || empty($nama) || empty($telp)) {
+        if (empty($id) || empty($nama) || empty($rawTelp)) {
             Helper::setFlash('error', 'Semua data wajib diisi dengan benar.');
             Helper::redirect(Helper::url('pelanggan'));
         }
+
+        // Validasi format nama
+        if (mb_strlen($nama) < 2 || mb_strlen($nama) > 100 || !preg_match('/^[a-zA-Z\s\.\'\-]+$/u', $nama)) {
+            Helper::setFlash('error', 'Nama pelanggan tidak valid. Hanya boleh berupa huruf, spasi, titik, atau tanda hubung (min 2 karakter).');
+            Helper::redirect(Helper::url('pelanggan'));
+        }
+
+        // Validasi nomor telepon
+        if (!Helper::isValidPhone($rawTelp)) {
+            Helper::setFlash('error', 'Nomor telepon tidak valid. Masukkan nomor HP Indonesia yang benar (contoh: 08123456789).');
+            Helper::redirect(Helper::url('pelanggan'));
+        }
+
+        $telp = Helper::normalizePhone($rawTelp);
 
         Pelanggan::update($id, [
             'nama_pelanggan' => $nama,

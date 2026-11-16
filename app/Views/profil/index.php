@@ -1,17 +1,15 @@
 <?php
 $user = $user ?? \App\Core\Auth::user();
-$nama = $user['nama_anggota'] ?? 'Siti Rahayu';
-if (empty($nama) || $nama === 'Kasir Outlet') {
-    $nama = 'Siti Rahayu';
-}
-$username = $user['username'] ?? 'siti';
+$nama = $user['nama_anggota'] ?? ($user['username'] ?? 'Pengguna');
+$username = $user['username'] ?? 'user';
 $isKasir = \App\Core\Auth::isKasir();
 $roleTitle = \App\Core\Auth::isAdmin() ? 'Pemilik Gerai' : ($isKasir ? 'Kasir Meja Depan' : ($user['nama_role'] ?? 'Staf Operasional'));
 
-$words = explode(' ', trim($nama));
-$initials = strtoupper(substr($words[0] ?? 'S', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : substr($words[0] ?? 'R', 1, 1)));
-if ($isKasir && ($nama === 'Siti Rahayu' || $initials === 'KO')) {
-    $initials = 'SR';
+$words = array_values(array_filter(explode(' ', trim($nama))));
+if (count($words) >= 2) {
+    $initials = strtoupper(mb_substr($words[0], 0, 1) . mb_substr($words[1], 0, 1));
+} else {
+    $initials = strtoupper(mb_substr($words[0] ?? 'U', 0, min(2, mb_strlen($words[0] ?? 'U'))));
 }
 ?>
 
@@ -25,19 +23,9 @@ if ($isKasir && ($nama === 'Siti Rahayu' || $initials === 'KO')) {
             <?php include __DIR__ . '/../layouts/kasir_header_actions.php'; ?>
         </div>
 
-        <?php if (!empty($_SESSION['flash_error'])): ?>
-            <div class="alert alert-danger" style="margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; font-size: 0.82rem; background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5;">
-                <?= htmlspecialchars($_SESSION['flash_error']) ?>
-                <?php unset($_SESSION['flash_error']); ?>
-            </div>
-        <?php endif; ?>
+        
 
-        <?php if (!empty($_SESSION['flash_success'])): ?>
-            <div class="alert alert-success" style="margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; font-size: 0.82rem; background: #F0FDF4; color: #16A34A; border: 1px solid #86EFAC;">
-                <?= htmlspecialchars($_SESSION['flash_success']) ?>
-                <?php unset($_SESSION['flash_success']); ?>
-            </div>
-        <?php endif; ?>
+        
 
         <!-- Kartu 1: Identitas Pegawai -->
         <div class="profile-panel-card">

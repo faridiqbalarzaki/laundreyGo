@@ -70,25 +70,47 @@ class PesananController {
         $id = Helper::sanitize($_POST['id_pesanan'] ?? '');
         $status = Helper::sanitize($_POST['status_cucian'] ?? '');
         $catatan = Helper::sanitize($_POST['keterangan'] ?? '');
-        $rak = !empty($_POST['lokasi_rak']) ? Helper::sanitize($_POST['lokasi_rak']) : null;
+        $rak = isset($_POST['lokasi_rak']) ? Helper::sanitize($_POST['lokasi_rak']) : null;
+        $isAjax = !empty($_POST['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
         if (empty($id) || empty($status)) {
+            if ($isAjax) {
+                Helper::jsonResponse(['success' => false, 'message' => 'Data update status tidak lengkap.'], 400);
+            }
             Helper::setFlash('error', 'Data update status tidak lengkap.');
             Helper::redirect(Helper::url('pesanan'));
+        }
+
+        // Jika status diubah/diundur ke tahapan sebelum Siap Diambil, pastikan rak dikosongkan
+        if (in_array($status, ['Antrean', 'Dicuci', 'Disetrika'], true) && empty($rak)) {
+            $rak = 'clear';
+        }
+
+        if (empty($catatan)) {
+            $catatan = "Pembaruan status pesanan ke {$status} oleh petugas";
         }
 
         $success = Pesanan::updateStatus($id, $status, Auth::id(), $catatan, $rak);
 
         if ($success) {
             LogAktivitas::log('Update Status Pesanan', "Pesanan {$id} diubah ke {$status}", Auth::id());
+            if ($isAjax) {
+                Helper::jsonResponse(['success' => true, 'message' => "Status pesanan {$id} berhasil diubah ke {$status}."]);
+            }
             Helper::setFlash('success', "Status pesanan {$id} berhasil diubah ke {$status}.");
         } else {
+            if ($isAjax) {
+                Helper::jsonResponse(['success' => false, 'message' => "Gagal memperbarui status pesanan {$id}."], 500);
+            }
             Helper::setFlash('error', "Gagal memperbarui status pesanan {$id}.");
         }
 
-        // Kembali ke halaman perujuk aman (whitelist agar tidak terkena open-redirect)
-        $allowedRedirects = ['pesanan', 'produksi', 'dashboard', 'pos'];
+        // Kembali ke halaman perujuk aman (whitelist)
+        $allowedRedirects = ['pesanan', 'produksi', 'dashboard', 'pos', 'selesai'];
         $redirectPage = in_array($_POST['redirect_to'] ?? '', $allowedRedirects, true) ? $_POST['redirect_to'] : 'pesanan';
+        if ($redirectPage === 'selesai') {
+            Helper::redirect(Helper::url('pesanan', ['action' => 'selesai']));
+        }
         Helper::redirect(Helper::url($redirectPage));
     }
 

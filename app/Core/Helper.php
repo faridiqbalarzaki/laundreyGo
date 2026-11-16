@@ -95,6 +95,13 @@ class Helper {
         return htmlspecialchars(trim($str), ENT_QUOTES, 'UTF-8');
     }
 
+        /**
+     * Alias backward-compatible untuk setFlash
+     */
+    public static function flash(string $type, string $message): void {
+        self::setFlash($type, $message);
+    }
+
     /**
      * Mengatur pesan notifikasi (Flash Message)
      */
@@ -147,36 +154,102 @@ class Helper {
      */
     public static function generateInvoice(): string {
         $prefix = 'LG-' . date('ymd') . '-';
-        $sql = "SELECT id_pesanan FROM pesanan WHERE id_pesanan LIKE :prefix ORDER BY id_pesanan DESC LIMIT 1";
+        $sql = "SELECT id_pesanan FROM pesanan WHERE id_pesanan LIKE :prefix ORDER BY LENGTH(id_pesanan) DESC, id_pesanan DESC LIMIT 1";
         $lastOrder = Database::fetch($sql, ['prefix' => $prefix . '%']);
 
         if ($lastOrder) {
             $lastNumber = (int)substr($lastOrder['id_pesanan'], -3);
-            $newNumber = str_pad((string)($lastNumber + 1), 3, '0', STR_PAD_LEFT);
+            $nextNumber = $lastNumber + 1;
         } else {
-            $newNumber = '001';
+            $nextNumber = 1;
         }
 
-        return $prefix . $newNumber;
+        do {
+            $candidate = $prefix . str_pad((string)$nextNumber, 3, '0', STR_PAD_LEFT);
+            $check = Database::fetch("SELECT 1 FROM pesanan WHERE id_pesanan = :id LIMIT 1", ['id' => $candidate]);
+            if ($check) {
+                $nextNumber++;
+            } else {
+                break;
+            }
+        } while (true);
+
+        return $candidate;
     }
 
     /**
      * Generate Sequential ID untuk Master Data (contoh: PEL-001, EXP-001)
      */
     public static function generateId(string $prefix, string $table, string $column, int $padLength = 3): string {
-        // Gunakan ORDER BY LENGTH({$column}) DESC, {$column} DESC untuk menghindari string sorting collision (e.g. '099' vs '1000')
-        $sql = "SELECT {$column} FROM {$table} WHERE {$column} LIKE :prefix ORDER BY LENGTH({$column}) DESC, {$column} DESC LIMIT 1";
-        $lastRow = Database::fetch($sql, ['prefix' => $prefix . '%']);
-
-        if ($lastRow) {
-            $lastStr = $lastRow[$column];
-            $numericPart = preg_replace('/[^0-9]/', '', substr($lastStr, strlen($prefix)));
-            $nextNumber = ((int)$numericPart) + 1;
-        } else {
-            $nextNumber = 1;
+        // Validasi whitelist nama tabel dan kolom untuk mencegah injeksi identifier
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+            throw new \InvalidArgumentException('Tabel atau kolom identifier tidak valid.');
         }
 
-        return $prefix . str_pad((string)$nextNumber, $padLength, '0', STR_PAD_LEFT);
+        $escapedPrefix = preg_quote($prefix, '/');
+        $allRows = Database::query("SELECT {$column} FROM {$table} WHERE {$column} LIKE :prefix", ['prefix' => $prefix . '%']);
+        $maxNum = 0;
+        foreach ($allRows as $r) {
+            $val = $r[$column] ?? '';
+            if (preg_match('/^' . $escapedPrefix . '([0-9]+)/', $val, $m)) {
+                $num = (int)$m[1];
+                if ($num > $maxNum) {
+                    $maxNum = $num;
+                }
+            }
+        }
+        $nextNumber = $maxNum + 1;
+
+        do {
+            $candidate = $prefix . str_pad((string)$nextNumber, $padLength, '0', STR_PAD_LEFT);
+            $check = Database::fetch("SELECT 1 FROM {$table} WHERE {$column} = :id LIMIT 1", ['id' => $candidate]);
+            if ($check) {
+                $nextNumber++;
+            } else {
+                break;
+            }
+        } while (true);
+
+        return $candidate;
+    }
+
+    /**
+     * Validasi format nomor telepon seluler Indonesia (+62 / 62 / 08, panjang 10-15 digit)
+     */
+    public static function isValidPhone(?string $phone): bool {
+        if ($phone === null) return false;
+        $clean = preg_replace('/[\s\-]/', '', trim($phone));
+        return (bool)preg_match('/^(\+62|62|08)[0-9]{8,13}$/', $clean);
+    }
+
+    /**
+     * Normalisasi nomor telepon ke format 08xx
+     */
+    public static function normalizePhone(?string $phone): string {
+        if ($phone === null) return '';
+        $clean = preg_replace('/[\s\-]/', '', trim($phone));
+        if (str_starts_with($clean, '+62')) {
+            return '0' . substr($clean, 3);
+        } elseif (str_starts_with($clean, '62')) {
+            return '0' . substr($clean, 2);
+        }
+        return $clean;
+    }
+
+    /**
+     * Validasi format nomor nota LaundryGo (LG-YYMMDD-XXX atau LG-YYYYMMDD-XXX)
+     */
+    public static function isValidInvoice(?string $invoice): bool {
+        if ($invoice === null) return false;
+        return (bool)preg_match('/^LG-[0-9]{6,8}-[0-9]{3,4}$/i', trim($invoice));
+    }
+
+    /**
+     * Validasi format username (alphanumeric & underscore, 3-30 karakter)
+     */
+    public static function isValidUsername(?string $username): bool {
+        if ($username === null) return false;
+        return (bool)preg_match('/^[a-zA-Z0-9_]{3,30}$/', trim($username));
     }
 
     /**

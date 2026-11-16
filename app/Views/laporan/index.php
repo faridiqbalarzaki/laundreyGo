@@ -100,7 +100,7 @@ $isCustomActive = !empty($_GET['custom_date']);
             </button>
 
             <!-- Tombol 2: Laporan akhir bulan -->
-            <button type="button" onclick="alert('Mencetak rekap laporan akhir bulan...')"
+            <button type="button" onclick="if (typeof showToast === 'function') { showToast('Menyiapkan rekap laporan keuangan akhir bulan...', 'info', 'Cetak Rekap'); setTimeout(function(){ window.print(); }, 600); } else { window.print(); }"
                 style="display: inline-flex; align-items: center; justify-content: center; height: 38px; padding: 0 18px; border-radius: 9999px; background: #0ea5e9; border: none; color: #ffffff; font-size: 0.82rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.28); transition: all 0.15s ease;">
                 <span>Laporan akhir bulan</span>
             </button>

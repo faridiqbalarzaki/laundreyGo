@@ -7,14 +7,12 @@ $isKasir = \App\Core\Auth::isKasir();
 $isPetugas = \App\Core\Auth::isPetugas();
 
 // Avatar initials & profile
-$nama = $user['nama_anggota'] ?? ($isKasir ? 'Siti Rahayu' : 'User');
-if ($isKasir && (empty($user['nama_anggota']) || $user['nama_anggota'] === 'Kasir Outlet')) {
-    $nama = 'Siti Rahayu';
-}
-$words = explode(' ', trim($nama));
-$initials = strtoupper(substr($words[0] ?? 'S', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : substr($words[0] ?? 'R', 1, 1)));
-if ($isKasir && $nama === 'Siti Rahayu') {
-    $initials = 'SR';
+$nama = $user['nama_anggota'] ?? ($user['username'] ?? 'User');
+$words = array_values(array_filter(explode(' ', trim($nama))));
+if (count($words) >= 2) {
+    $initials = strtoupper(mb_substr($words[0], 0, 1) . mb_substr($words[1], 0, 1));
+} else {
+    $initials = strtoupper(mb_substr($words[0] ?? 'U', 0, min(2, mb_strlen($words[0] ?? 'U'))));
 }
 
 // Role subtitle label
@@ -181,7 +179,14 @@ $roleTitle = $isAdmin ? 'Pemilik Gerai' : ($isKasir ? 'Kasir Meja Depan' : ($use
                         <span class="sidebar-profile-role" style="display: block; font-size: 0.70rem; color: #64748B; text-decoration: none !important;"><?= htmlspecialchars($roleTitle) ?></span>
                     </span>
                 </a>
-                <a href="<?= \App\Core\Helper::url('logout') ?>" class="sidebar-profile-logout" title="Keluar Akun" onclick="return confirm('Apakah Anda yakin ingin keluar?')" style="text-decoration: none !important;">
+                <a href="<?= \App\Core\Helper::url('logout') ?>" class="sidebar-profile-logout" title="Keluar Akun"
+                    data-confirm="true"
+                    data-confirm-title="Keluar dari Akun?"
+                    data-confirm-message="Sesi kerja Anda saat ini akan diakhiri. Pastikan seluruh transaksi kasir telah selesai diproses."
+                    data-confirm-badge="<?= htmlspecialchars($nama) ?> &bull; <?= htmlspecialchars($roleTitle) ?>"
+                    data-confirm-btn="Ya, Keluar Akun"
+                    data-confirm-type="warning"
+                    style="text-decoration: none !important;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 </a>
             </div>

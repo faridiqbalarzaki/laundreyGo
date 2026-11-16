@@ -29,7 +29,7 @@ $totalCustomers = count($customerList);
         <div style="flex: 1;"></div>
         <button type="button" class="btn btn-primary" onclick="openCustomerModal()" style="height: 36px; border-radius: 9999px; padding: 0 16px; font-size: 0.80rem; font-weight: 700; background: #0284C7; color: #FFFFFF; border: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px -1px rgba(2, 132, 199, 0.35);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            <span>+ Tambah Pelanggan</span>
+            <span>Tambah Pelanggan</span>
         </button>
     </div>
 
@@ -75,7 +75,13 @@ $totalCustomers = count($customerList);
                                         <div style="line-height: 1.25;">
                                             <strong class="cust-name-val" style="color: #0F172A; font-size: 0.82rem; font-weight: 700;"><?= htmlspecialchars($cName) ?></strong>
                                             <div style="margin-top: 1px;">
-                                                <span style="color: #64748B; font-size: 0.70rem; font-weight: 500;">Pelanggan Tetap</span>
+                                                <?php if ($orderCount >= 5): ?>
+                                                    <span style="color: #0284C7; font-size: 0.70rem; font-weight: 700;">Pelanggan Loyal</span>
+                                                <?php elseif ($orderCount >= 1): ?>
+                                                    <span style="color: #16A34A; font-size: 0.70rem; font-weight: 600;">Pelanggan Aktif</span>
+                                                <?php else: ?>
+                                                    <span style="color: #64748B; font-size: 0.70rem; font-weight: 500;">Pelanggan Baru</span>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>
@@ -106,7 +112,13 @@ $totalCustomers = count($customerList);
                                             <span>Edit</span>
                                         </button>
                                         <?php if (\App\Core\Auth::isAdmin()): ?>
-                                            <form action="<?= \App\Core\Helper::url('pelanggan', ['action' => 'delete']) ?>" method="POST" style="display:inline;" onsubmit="return confirm('Hapus data pelanggan ini? Data dengan riwayat pesanan tidak dapat dihapus.')">
+                                            <form action="<?= \App\Core\Helper::url('pelanggan', ['action' => 'delete']) ?>" method="POST" style="display:inline;"
+                                                data-confirm="true"
+                                                data-confirm-title="Hapus Data Pelanggan?"
+                                                data-confirm-message="Pelanggan ini akan dihapus dari database. Data dengan riwayat transaksi aktif tidak dapat dihapus."
+                                                data-confirm-badge="<?= htmlspecialchars($cName) ?> &bull; <?= htmlspecialchars($c['no_telepon']) ?>"
+                                                data-confirm-btn="Ya, Hapus Pelanggan"
+                                                data-confirm-type="danger">
                                                 <input type="hidden" name="id_pelanggan" value="<?= $c['id_pelanggan'] ?>">
                                                 <button type="submit" class="btn btn-secondary" style="font-size: 0.74rem; font-weight: 600; padding: 3px 8px; border-radius: 9999px; color: #ef4444; border: 1px solid #fee2e2; background: #fef2f2; cursor: pointer;">
                                                     Hapus
@@ -194,11 +206,12 @@ function openCustomerModal(id = '', name = '', phone = '') {
                     <div class="dialog-body" style="padding: 18px 22px; display: flex; flex-direction: column; gap: 14px;">
                         <div>
                             <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #0F172A; margin-bottom: 5px;">Nama Lengkap:</label>
-                            <input type="text" name="nama_pelanggan" class="form-control" required placeholder="Contoh: Ibu Rina Kartika" value="${name}">
+                            <input type="text" name="nama_pelanggan" class="form-control" required placeholder="Contoh: Ibu Rina Kartika" value="${name}" minlength="2" maxlength="100" pattern="^[a-zA-Z\\s\\.\\'\\-]+$" title="Nama hanya boleh berisi huruf, spasi, titik, atau tanda hubung (min 2 karakter)">
                         </div>
                         <div>
                             <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #0F172A; margin-bottom: 5px;">Nomor WhatsApp / HP:</label>
-                            <input type="tel" name="no_telepon" class="form-control" required placeholder="Contoh: 081298765432" value="${phone}">
+                            <input type="tel" name="no_telepon" class="form-control" required placeholder="Contoh: 081298765432" value="${phone}" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" pattern="^(\\+62|62|08)[0-9]{8,13}$" title="Nomor HP Indonesia yang valid: diawali 08, 62, atau +62 (10-15 digit)">
+                            <div style="font-size: 0.7rem; color: #64748B; margin-top: 4px;">Contoh: 08123456789 atau +628123456789</div>
                         </div>
                     </div>
                     <div class="dialog-foot">

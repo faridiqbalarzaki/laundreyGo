@@ -53,6 +53,18 @@
     return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
   }
 
+  function formatNumberDots(num) {
+    if (num === null || num === undefined || isNaN(num) || num === '') return '';
+    const val = Math.round(Number(num));
+    return val > 0 ? val.toLocaleString('id-ID') : '';
+  }
+
+  function parseNumberDots(str) {
+    if (!str) return 0;
+    const clean = String(str).replace(/[^0-9]/g, '');
+    return parseInt(clean, 10) || 0;
+  }
+
   function formatDateTime(dateInput) {
     const d = dateInput ? new Date(dateInput) : new Date();
     const day = String(d.getDate()).padStart(2, '0');
@@ -114,16 +126,17 @@
     cartItems: [], // Multi-item cart
     posForm: {
       serviceId: 'srv-2',
-      appliedRate: 4500,
-      weightStr: '1',
-      weightVal: 1,
+      appliedRate: DEFAULT_SERVICES[1].activeRate || 5000,
+      weightStr: '',
+      weightVal: 0,
+      dirtyWeight: false,
       variantId: 'var-selimut',
       variantPrice: 10000,
       notes: [],
       customNote: '',
       isPaid: true,
       paymentMethod: 'Tunai',
-      cashReceived: 10000,
+      cashReceived: 0,
       selectedCustomer: null,
       customerNameInput: ''
     },
@@ -138,25 +151,30 @@
     const activeSrv = getActiveService();
     const isSatuan = activeSrv.category === 'Satuan';
 
-    let weightVal = 1;
-    if (isSatuan) {
-      weightVal = parseInt(STATE.posForm.weightStr, 10) || 1;
-      if (weightVal < 1) weightVal = 1;
-    } else {
-      const normalized = String(STATE.posForm.weightStr || '1').replace(',', '.');
-      weightVal = parseFloat(normalized);
-      if (isNaN(weightVal) || weightVal <= 0) weightVal = 1;
+    let weightVal = 0;
+    const rawWeight = String(STATE.posForm.weightStr || '').trim();
+    if (rawWeight !== '' && rawWeight !== '0') {
+      if (isSatuan) {
+        weightVal = parseInt(rawWeight, 10) || 0;
+        if (weightVal < 0) weightVal = 0;
+      } else {
+        const normalized = rawWeight.replace(',', '.');
+        weightVal = parseFloat(normalized);
+        if (isNaN(weightVal) || weightVal < 0) weightVal = 0;
+      }
     }
 
-    const appliedRate = isSatuan ? STATE.posForm.variantPrice : STATE.posForm.appliedRate;
+    const appliedRate = isSatuan ? STATE.posForm.variantPrice : (activeSrv.activeRate || activeSrv.minRate || STATE.posForm.appliedRate);
     const itemSubtotal = weightVal * appliedRate;
 
     // Total tagihan gabungan dari seluruh cartItems jika ada, atau item saat ini jika cart kosong
     let totalTagihan = 0;
     if (STATE.cartItems && STATE.cartItems.length > 0) {
       totalTagihan = STATE.cartItems.reduce((acc, it) => acc + (it.subtotal || 0), 0);
-    } else {
+    } else if (weightVal > 0) {
       totalTagihan = itemSubtotal;
+    } else {
+      totalTagihan = 0;
     }
 
     let presetMid = 20000;
@@ -166,7 +184,7 @@
 
     let kembalian = 0;
     let isUnderpaid = false;
-    if (STATE.posForm.isPaid && STATE.posForm.paymentMethod === 'Tunai') {
+    if (totalTagihan > 0 && STATE.posForm.isPaid && STATE.posForm.paymentMethod === 'Tunai') {
       kembalian = STATE.posForm.cashReceived - totalTagihan;
       if (kembalian < 0) isUnderpaid = true;
     }
@@ -232,9 +250,10 @@
       estimasiText = '~1 hari ke depan';
     }
 
+    const hasCustomer = !!(STATE.posForm.selectedCustomer || (STATE.posForm.customerNameInput && STATE.posForm.customerNameInput.trim()));
     const activeCustName = STATE.posForm.selectedCustomer
       ? STATE.posForm.selectedCustomer.name
-      : (STATE.posForm.customerNameInput.trim() || 'Pelanggan Umum');
+      : (STATE.posForm.customerNameInput.trim() || 'Belum Dipilih');
 
     root.innerHTML = `
       <div class="pos-grid-container">
@@ -247,7 +266,7 @@
                 <span class="pos-step-badge">1</span>
                 <span class="pos-step-label">Data Pelanggan</span>
               </span>
-              <span id="pos-cust-active-pill" class="pos-cust-active-pill" title="Pelanggan terpilih">
+              <span id="pos-cust-active-pill" class="pos-cust-active-pill ${!hasCustomer ? 'is-unselected' : ''}" title="Pelanggan terpilih">
                 ${escapeHtmlAttr(activeCustName)}
               </span>
             </div>
@@ -320,10 +339,10 @@
                   <div class="keypad-display-head">
                     <div class="keypad-head-meta">
                       <span class="keypad-service-name">${activeSrv.name}</span>
-                      <span id="keypad-rate-tag" class="keypad-rate-tag num-tabular">${formatRp(STATE.posForm.appliedRate)}/${activeSrv.unit}</span>
+                      <span id="keypad-rate-tag" class="keypad-rate-tag num-tabular">${formatRp(appliedRate)}/${activeSrv.unit}</span>
                     </div>
                     <div class="keypad-readout-row">
-                      <span id="keypad-weight-val" class="keypad-readout-num num-tabular">${STATE.posForm.weightStr || weightVal}</span>
+                      <span id="keypad-weight-val" class="keypad-readout-num num-tabular" style="${!STATE.posForm.weightStr || weightVal <= 0 ? 'opacity: 0.45;' : ''}">${STATE.posForm.weightStr || '0'}</span>
                       <span class="keypad-readout-unit">${activeSrv.unit}</span>
                     </div>
                     <div class="keypad-subtotal-bar">
@@ -430,7 +449,7 @@
           <div class="receipt-header-row">
             <div class="receipt-title-wrap">
               <span class="receipt-main-text">Nota</span>
-              <span id="receipt-cust-badge" class="receipt-cust-badge">
+              <span id="receipt-cust-badge" class="receipt-cust-badge ${!hasCustomer ? 'is-unselected' : ''}">
                 ${escapeHtmlAttr(activeCustName)}
               </span>
             </div>
@@ -468,8 +487,8 @@
                   ` : ''}
                 </div>
               `).join('')}
-            ` : `
-              <!-- Preview Item Saat Cart Belum Diterapkan -->
+            ` : (weightVal > 0 ? `
+              <!-- Preview Item Saat Cart Belum Diterapkan tapi berat > 0 -->
               <div class="receipt-item-box is-preview" id="receipt-item-box" style="border: 1px dashed #CBD5E1;">
                 <div class="item-box-top-row">
                   <div class="item-desc-col">
@@ -495,7 +514,22 @@
                   Klik "Terapkan ke Nota" untuk mengunci layanan ini
                 </div>
               </div>
-            `}
+            ` : `
+              <!-- Empty State Nota Bersih -->
+              <div class="receipt-empty-state">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: #E0F2FE; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #0284C7;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                  </svg>
+                </div>
+                <div style="font-size: 0.88rem; font-weight: 700; color: var(--ink); margin-bottom: 4px;">Nota Masih Kosong</div>
+                <div style="font-size: 0.75rem; color: var(--ink-muted); line-height: 1.4; max-width: 220px;">
+                  Pilih layanan di sebelah kiri dan masukkan berat cucian, lalu kunci ke nota.
+                </div>
+              </div>
+            `)}
           </div>
 
           <!-- 3. Panel Total Tagihan Ice-Blue -->
@@ -532,24 +566,40 @@
 
             <!-- 7. Presets Uang Tunai -->
             ${STATE.posForm.paymentMethod === 'Tunai' ? `
-              <div class="cash-presets-row">
-                <button type="button" class="preset-cash-chip is-exact" id="btn-preset-exact" title="Pintasan: Alt+P">
-                  Uang pas
-                </button>
-                <button type="button" id="preset-mid-chip" class="preset-cash-chip" data-preset="${presetMid}">
-                  ${Number(presetMid).toLocaleString('id-ID')}
-                </button>
-                <button type="button" class="preset-cash-chip" data-preset="100000">
-                  100.000
-                </button>
-              </div>
+              ${(() => {
+                const isExactActive = STATE.posForm.cashReceived === totalTagihan && totalTagihan > 0;
+                const isMidActive = STATE.posForm.cashReceived === presetMid && !isExactActive;
+                const isMaxActive = STATE.posForm.cashReceived === 100000 && !isExactActive && !isMidActive;
+                return `
+                  <div class="cash-presets-row" role="radiogroup" aria-label="Preset Nominal Pembayaran">
+                    <button type="button" class="preset-cash-chip ${isExactActive ? 'active is-exact' : ''}" id="btn-preset-exact" data-cash-mode="exact" title="Bayar Uang Pas">
+                      Uang pas
+                    </button>
+                    <button type="button" id="preset-mid-chip" class="preset-cash-chip ${isMidActive ? 'active' : ''}" data-preset="${presetMid}" data-cash-mode="mid" title="Preset Rp ${formatNumberDots(presetMid)}">
+                      Rp ${formatNumberDots(presetMid)}
+                    </button>
+                    <button type="button" class="preset-cash-chip ${isMaxActive ? 'active' : ''}" data-preset="100000" data-cash-mode="max" title="Preset Rp 100.000">
+                      Rp 100.000
+                    </button>
+                  </div>
+                `;
+              })()}
 
-              <!-- Input Nominal Tunai Manual -->
-              <div style="position: relative;">
-                <input type="number" step="1000" class="form-control num-tabular font-mono" id="pos-cash-input"
-                  placeholder="Input uang diterima..." 
-                  value="${STATE.posForm.cashReceived}" 
-                  style="font-size: 0.95rem; font-weight: 700;">
+              <!-- Input Nominal Tunai Manual Terformat -->
+              <div class="cash-input-group-modern" id="cash-input-group">
+                <span class="cash-input-prefix font-mono">Rp</span>
+                <input type="text" inputmode="numeric" 
+                  class="form-control num-tabular font-mono cash-input-formatted" 
+                  id="pos-cash-input"
+                  placeholder="0" 
+                  value="${STATE.posForm.cashReceived > 0 ? formatNumberDots(STATE.posForm.cashReceived) : ''}" 
+                  autocomplete="off"
+                  spellcheck="false">
+                ${STATE.posForm.cashReceived > 0 ? `
+                  <button type="button" class="btn-clear-cash-input" id="btn-clear-cash-input" title="Kosongkan nominal">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                ` : ''}
               </div>
 
               <!-- 8. Bar Kembalian Mint -->
@@ -572,7 +622,7 @@
           `}
 
           <!-- 9. Tombol Simpan & Cetak Nota -->
-          <button type="button" id="btn-submit-nota" class="btn-submit-nota" ${isUnderpaid ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+          <button type="button" id="btn-submit-nota" class="btn-submit-nota">
             <span>Simpan & cetak nota</span>
           </button>
         </div>
@@ -603,9 +653,11 @@
         const srv = STATE.services.find(s => s.id === id);
         if (!srv) return;
         STATE.posForm.serviceId = srv.id;
-        STATE.posForm.appliedRate = srv.minRate;
-        STATE.posForm.weightStr = '1';
-        STATE.posForm.weightVal = 1;
+        STATE.posForm.appliedRate = srv.activeRate || srv.minRate;
+        if (!STATE.posForm.dirtyWeight) {
+          STATE.posForm.weightStr = '';
+          STATE.posForm.weightVal = 0;
+        }
         STATE.justSwitchedService = true;
         renderPosWorkstation();
       });
@@ -696,11 +748,20 @@
     const custDropdown = document.getElementById('pos-cust-dropdown');
     if (custSearch && custDropdown) {
       custSearch.addEventListener('input', (e) => {
-        const query = e.target.value.trim().toLowerCase();
-        STATE.posForm.customerNameInput = e.target.value;
+        const rawVal = e.target.value;
+        const query = rawVal.trim().toLowerCase();
+        STATE.posForm.customerNameInput = rawVal;
         STATE.posForm.selectedCustomer = null;
-        document.getElementById('pos-cust-active-pill').textContent = e.target.value || 'Pelanggan Umum';
-        document.getElementById('receipt-cust-badge').textContent = e.target.value || 'Pelanggan Umum';
+
+        const pill = document.getElementById('pos-cust-active-pill');
+        const badge = document.getElementById('receipt-cust-badge');
+        if (query.length > 0) {
+          if (pill) { pill.textContent = rawVal; pill.classList.remove('is-unselected'); }
+          if (badge) { badge.textContent = rawVal; badge.classList.remove('is-unselected'); }
+        } else {
+          if (pill) { pill.textContent = 'Belum Dipilih'; pill.classList.add('is-unselected'); }
+          if (badge) { badge.textContent = 'Belum Dipilih'; badge.classList.add('is-unselected'); }
+        }
 
         if (query.length < 1) {
           custDropdown.style.display = 'none';
@@ -772,13 +833,96 @@
       });
     });
 
+    // Helper untuk update visual cash UI (Input, Chip Preset, Kembalian) tanpa full rerender
+    function updateCashUI(amt, skipInputVal = false) {
+      const { totalTagihan, presetMid } = getPosTotals();
+      const cashInput = document.getElementById('pos-cash-input');
+      if (cashInput && !skipInputVal) {
+        cashInput.value = amt > 0 ? formatNumberDots(amt) : '';
+      }
+
+      // Update clear button
+      let clearBtn = document.getElementById('btn-clear-cash-input');
+      const group = document.getElementById('cash-input-group');
+      if (amt > 0) {
+        if (!clearBtn && group) {
+          clearBtn = document.createElement('button');
+          clearBtn.type = 'button';
+          clearBtn.className = 'btn-clear-cash-input';
+          clearBtn.id = 'btn-clear-cash-input';
+          clearBtn.title = 'Kosongkan nominal';
+          clearBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+          clearBtn.addEventListener('click', clearCash);
+          group.appendChild(clearBtn);
+        }
+      } else if (clearBtn) {
+        clearBtn.remove();
+      }
+
+      // Sync active classes with spring pop
+      const isExact = amt === totalTagihan && totalTagihan > 0;
+      const isMid = amt === presetMid && !isExact;
+      const isMax = amt === 100000 && !isExact && !isMid;
+
+      const btnExact = document.getElementById('btn-preset-exact');
+      const btnMid = document.getElementById('preset-mid-chip');
+      const btnMax = document.querySelector('.preset-cash-chip[data-cash-mode="max"]') || document.querySelector('.preset-cash-chip[data-preset="100000"]');
+
+      if (btnExact) {
+        btnExact.classList.toggle('active', isExact);
+        btnExact.classList.toggle('is-exact', isExact);
+      }
+      if (btnMid) btnMid.classList.toggle('active', isMid);
+      if (btnMax) btnMax.classList.toggle('active', isMax);
+
+      // Kembalian calculation
+      const diff = amt - totalTagihan;
+      const strip = document.getElementById('receipt-kembalian-strip');
+      const valSpan = document.getElementById('receipt-kembalian-val');
+      const lblSpan = document.getElementById('receipt-kembalian-label');
+      const submitBtn = document.getElementById('btn-submit-nota');
+
+      if (valSpan) {
+        valSpan.classList.remove('kembalian-pulse');
+        void valSpan.offsetWidth; // trigger reflow
+        valSpan.classList.add('kembalian-pulse');
+      }
+
+      if (diff < 0) {
+        if (strip) strip.classList.add('is-underpaid');
+        if (lblSpan) lblSpan.textContent = 'Uang Masih Kurang';
+        if (valSpan) valSpan.textContent = '-' + formatRp(Math.abs(diff));
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.style.opacity = '0.5';
+          submitBtn.style.cursor = 'not-allowed';
+        }
+      } else {
+        if (strip) strip.classList.remove('is-underpaid');
+        if (lblSpan) lblSpan.textContent = 'Kembalian';
+        if (valSpan) valSpan.textContent = formatRp(diff);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+          submitBtn.style.cursor = 'pointer';
+        }
+      }
+    }
+
+    function clearCash() {
+      STATE.posForm.cashReceived = 0;
+      updateCashUI(0);
+      const cashInput = document.getElementById('pos-cash-input');
+      if (cashInput) cashInput.focus();
+    }
+
     // Cash Preset Buttons
     const btnExact = document.getElementById('btn-preset-exact');
     if (btnExact) {
       btnExact.addEventListener('click', () => {
         const { totalTagihan } = getPosTotals();
         STATE.posForm.cashReceived = totalTagihan;
-        renderPosWorkstation();
+        updateCashUI(totalTagihan);
       });
     }
 
@@ -786,41 +930,34 @@
       btn.addEventListener('click', () => {
         const amt = parseInt(btn.getAttribute('data-preset'), 10);
         STATE.posForm.cashReceived = amt;
-        renderPosWorkstation();
+        updateCashUI(amt);
       });
     });
 
-    // Manual Cash Input
+    const clearBtnInit = document.getElementById('btn-clear-cash-input');
+    if (clearBtnInit) {
+      clearBtnInit.addEventListener('click', clearCash);
+    }
+
+    // Manual Cash Input with Live Thousand Separator Masking
     const cashInput = document.getElementById('pos-cash-input');
     if (cashInput) {
       cashInput.addEventListener('input', (e) => {
-        STATE.posForm.cashReceived = parseFloat(e.target.value) || 0;
-        const { totalTagihan } = getPosTotals();
-        const diff = STATE.posForm.cashReceived - totalTagihan;
-        const strip = document.getElementById('receipt-kembalian-strip');
-        const valSpan = document.getElementById('receipt-kembalian-val');
-        const lblSpan = document.getElementById('receipt-kembalian-label');
-        const submitBtn = document.getElementById('btn-submit-nota');
+        const raw = e.target.value.replace(/[^0-9]/g, '');
+        const amt = raw ? parseInt(raw, 10) : 0;
+        STATE.posForm.cashReceived = amt;
 
-        if (diff < 0) {
-          strip.classList.add('is-underpaid');
-          lblSpan.textContent = 'Uang Masih Kurang';
-          valSpan.textContent = '-' + formatRp(Math.abs(diff));
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = '0.5';
-            submitBtn.style.cursor = 'not-allowed';
-          }
-        } else {
-          strip.classList.remove('is-underpaid');
-          lblSpan.textContent = 'Kembalian';
-          valSpan.textContent = formatRp(diff);
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            submitBtn.style.cursor = 'pointer';
-          }
-        }
+        // Preserve cursor position during live-masking
+        const prevLen = e.target.value.length;
+        const prevPos = e.target.selectionStart || 0;
+        const formatted = amt > 0 ? formatNumberDots(amt) : '';
+        e.target.value = formatted;
+
+        const newLen = formatted.length;
+        const newPos = Math.max(0, prevPos + (newLen - prevLen));
+        e.target.setSelectionRange(newPos, newPos);
+
+        updateCashUI(amt, true);
       });
     }
 
@@ -875,8 +1012,13 @@
   function applyCurrentServiceToNota() {
     const { activeSrv, isSatuan, weightVal, appliedRate, itemSubtotal } = getPosTotals();
     if (weightVal <= 0) {
-      showToast('Berat atau jumlah item minimal lebih dari 0.');
-      return;
+      showToast('Silakan masukkan berat cucian lebih dari 0 terlebih dahulu.', 'warning', 'Perhatian');
+      const numpad = document.querySelector('.keypad-hairline-grid');
+      if (numpad) {
+        numpad.classList.add('is-invalid-shake');
+        setTimeout(() => numpad.classList.remove('is-invalid-shake'), 600);
+      }
+      return false;
     }
 
     const itemName = isSatuan 
@@ -900,38 +1042,42 @@
 
     STATE.cartItems.push(newItem);
 
-    // Auto update cash received jika pas atau kurang
+    // Auto update cash received jika pas atau belum diisi
     const newTotal = STATE.cartItems.reduce((acc, it) => acc + it.subtotal, 0);
-    if (STATE.posForm.cashReceived < newTotal) {
+    if (STATE.posForm.paymentMethod === 'Tunai' && (STATE.posForm.cashReceived < newTotal || STATE.posForm.cashReceived === 0)) {
       STATE.posForm.cashReceived = newTotal;
     }
 
     // Reset weight dan notes agar kasir siap memilih layanan berikutnya
-    STATE.posForm.weightStr = '1';
+    STATE.posForm.weightStr = '';
+    STATE.posForm.weightVal = 0;
     STATE.posForm.dirtyWeight = false;
     STATE.posForm.notes = [];
     STATE.posForm.customNote = '';
 
-    showToast(`✓ ${newItem.name} (${newItem.weight} ${newItem.unit}) dikunci ke nota.`);
+    showToast(`Layanan ${newItem.name} (${newItem.weight} ${newItem.unit}) dikunci ke nota.`, 'success', 'Item Ditambahkan');
     renderPosWorkstation();
+    return true;
   }
 
   window.removePosCartItem = function(itemId) {
     STATE.cartItems = STATE.cartItems.filter(it => it.id !== itemId);
     const newTotal = STATE.cartItems.reduce((acc, it) => acc + it.subtotal, 0);
-    if (STATE.posForm.cashReceived < newTotal) {
+    if (newTotal === 0) {
+      STATE.posForm.cashReceived = 0;
+    } else if (STATE.posForm.cashReceived > newTotal) {
       STATE.posForm.cashReceived = newTotal;
     }
-    showToast('Layanan dihapus dari nota.');
+    showToast('Layanan dihapus dari nota.', 'info', 'Nota Diperbarui');
     renderPosWorkstation();
   };
 
-  function resetPosForm() {
+  function resetPosForm(skipToast = false) {
     STATE.cartItems = [];
     STATE.posForm.serviceId = 'srv-2';
-    STATE.posForm.appliedRate = 4500;
-    STATE.posForm.weightStr = '1';
-    STATE.posForm.weightVal = 1;
+    STATE.posForm.appliedRate = DEFAULT_SERVICES[1].activeRate || 5000;
+    STATE.posForm.weightStr = '';
+    STATE.posForm.weightVal = 0;
     STATE.posForm.dirtyWeight = false;
     STATE.posForm.variantId = 'var-selimut';
     STATE.posForm.variantPrice = 10000;
@@ -939,61 +1085,104 @@
     STATE.posForm.customNote = '';
     STATE.posForm.isPaid = true;
     STATE.posForm.paymentMethod = 'Tunai';
-    STATE.posForm.cashReceived = 10000;
+    STATE.posForm.cashReceived = 0;
     STATE.posForm.selectedCustomer = null;
     STATE.posForm.customerNameInput = '';
     renderPosWorkstation();
-    showToast('Form kasir & rincian nota telah dikosongkan.');
+    if (!skipToast) {
+      showToast('Form kasir & rincian nota telah dikosongkan.', 'info', 'Form Dikosongkan');
+    }
   }
 
   // --- 7. SUBMIT PESANAN VIA AJAX ---
   function submitPosOrder() {
+    // GERBANG 1: Validasi Pelanggan
+    const hasCustomer = !!(STATE.posForm.selectedCustomer || (STATE.posForm.customerNameInput && STATE.posForm.customerNameInput.trim()));
+    if (!hasCustomer) {
+      showToast('Silakan pilih atau ketik nama pelanggan terlebih dahulu!', 'warning', 'Data Pelanggan Kosong');
+      const custInput = document.getElementById('pos-cust-search');
+      if (custInput) {
+        custInput.focus();
+        custInput.classList.add('is-invalid-shake');
+        setTimeout(() => custInput.classList.remove('is-invalid-shake'), 600);
+      }
+      return;
+    }
+
+    if (!STATE.posForm.selectedCustomer) {
+      const cName = STATE.posForm.customerNameInput.trim();
+      if (cName.length < 2 || !/^[a-zA-Z\s\.\'\-]+$/.test(cName)) {
+        showToast('Nama pelanggan baru tidak valid! Gunakan minimal 2 karakter huruf.', 'warning', 'Nama Pelanggan Tidak Valid');
+        const custInput = document.getElementById('pos-cust-search');
+        if (custInput) {
+          custInput.focus();
+          custInput.classList.add('is-invalid-shake');
+          setTimeout(() => custInput.classList.remove('is-invalid-shake'), 600);
+        }
+        return;
+      }
+    }
+
     const { activeSrv, weightVal, totalTagihan } = getPosTotals();
+
+    // GERBANG 2: Validasi Keranjang / Layanan & Berat
+    if (!STATE.cartItems || STATE.cartItems.length === 0) {
+      if (weightVal <= 0) {
+        showToast('Silakan masukkan berat cucian dan kunci ke nota terlebih dahulu!', 'warning', 'Layanan & Berat Kosong');
+        const numpad = document.querySelector('.keypad-hairline-grid');
+        if (numpad) {
+          numpad.classList.add('is-invalid-shake');
+          setTimeout(() => numpad.classList.remove('is-invalid-shake'), 600);
+        }
+        return;
+      }
+      const locked = applyCurrentServiceToNota();
+      if (!locked) return;
+    }
+
+    const currentTotals = getPosTotals();
+    const finalTotal = currentTotals.totalTagihan;
+
+    if (finalTotal <= 0 || !STATE.cartItems || STATE.cartItems.length === 0) {
+      showToast('Rincian nota masih kosong. Masukkan berat cucian terlebih dahulu!', 'warning', 'Nota Kosong');
+      return;
+    }
+
+    // GERBANG 3: Validasi Pembayaran Tunai
+    if (STATE.posForm.isPaid && STATE.posForm.paymentMethod === 'Tunai') {
+      if (STATE.posForm.cashReceived < finalTotal) {
+        showToast('Uang tunai yang dibayarkan kurang dari total tagihan!', 'error', 'Uang Kurang');
+        const cashInput = document.getElementById('pos-cash-input');
+        if (cashInput) {
+          cashInput.focus();
+          cashInput.classList.add('is-invalid-shake');
+          setTimeout(() => cashInput.classList.remove('is-invalid-shake'), 600);
+        }
+        return;
+      }
+    }
 
     let itemsToSend = [];
     let isAnyKilat = false;
     let allNotes = [];
 
-    if (STATE.cartItems && STATE.cartItems.length > 0) {
-      itemsToSend = STATE.cartItems.map(it => {
-        if (it.isKilat) isAnyKilat = true;
-        const noteStr = it.notes.concat(it.customNote ? [it.customNote] : []).join(', ');
-        if (noteStr) allNotes.push(`${it.name}: ${noteStr}`);
-        return {
-          id_layanan: it.dbId,
-          jumlah: it.weight
-        };
-      });
-    } else {
-      if (weightVal <= 0) {
-        showToast('Pilih layanan dan klik "Terapkan ke Nota" terlebih dahulu.');
-        return;
-      }
-      const noteStr = [...STATE.posForm.notes, STATE.posForm.customNote].filter(Boolean).join(', ');
-      if (noteStr) allNotes.push(noteStr);
-      isAnyKilat = activeSrv.category === 'Kilat' || activeSrv.id === 'srv-5';
-      itemsToSend = [
-        {
-          id_layanan: activeSrv.dbId || (rawServices[0] ? rawServices[0].id_layanan : 'LAY-01'),
-          jumlah: weightVal
-        }
-      ];
-    }
+    itemsToSend = STATE.cartItems.map(it => {
+      if (it.isKilat) isAnyKilat = true;
+      const noteStr = it.notes.concat(it.customNote ? [it.customNote] : []).join(', ');
+      if (noteStr) allNotes.push(`${it.name}: ${noteStr}`);
+      return {
+        id_layanan: it.dbId,
+        jumlah: it.weight
+      };
+    });
 
-    if (STATE.posForm.isPaid && STATE.posForm.paymentMethod === 'Tunai') {
-      if (STATE.posForm.cashReceived < totalTagihan) {
-        showToast('Uang tunai kurang dari total tagihan.');
-        return;
-      }
-    }
-
+    const custId = STATE.posForm.selectedCustomer ? STATE.posForm.selectedCustomer.id : '';
     const custName = STATE.posForm.selectedCustomer 
       ? STATE.posForm.selectedCustomer.name 
-      : (STATE.posForm.customerNameInput.trim() || 'Pelanggan Umum');
+      : STATE.posForm.customerNameInput.trim();
     const custPhone = STATE.posForm.selectedCustomer 
-      ? STATE.posForm.selectedCustomer.phone 
-      : '081234567899';
-    const custId = STATE.posForm.selectedCustomer ? STATE.posForm.selectedCustomer.id : '';
+      ? (STATE.posForm.selectedCustomer.phone || '-') 
+      : '-';
 
     // Prepare JSON payload for PosController::store
     const payload = {
@@ -1004,8 +1193,10 @@
       parfum: 'Ocean Fresh',
       is_kilat: isAnyKilat,
       bayar_sekarang: STATE.posForm.isPaid ? 1 : 0,
-      jumlah_bayar: STATE.posForm.cashReceived,
-      id_metode: STATE.posForm.paymentMethod === 'Tunai' ? 'MET-01' : (STATE.posForm.paymentMethod === 'Transfer' ? 'MET-02' : 'MET-03'),
+      jumlah_bayar: STATE.posForm.isPaid ? STATE.posForm.cashReceived : 0,
+      id_metode: STATE.posForm.isPaid 
+        ? (STATE.posForm.paymentMethod === 'Tunai' ? 'MET-01' : (STATE.posForm.paymentMethod === 'Transfer' ? 'MET-02' : 'MET-03'))
+        : 'MET-04',
       items: itemsToSend
     };
 
@@ -1025,10 +1216,16 @@
       },
       body: JSON.stringify(payload)
     })
-    .then(r => r.json())
+    .then(async (r) => {
+      const res = await r.json().catch(() => ({}));
+      if (!r.ok || res.success === false) {
+        throw new Error(res.message || 'Gagal menyimpan transaksi pesanan.');
+      }
+      return res;
+    })
     .then(res => {
       const orderCode = res.id_pesanan || 'LG-' + Date.now().toString().slice(-6);
-      showToast(`Pesanan ${orderCode} tersimpan.`);
+      showToast(`Pesanan ${orderCode} berhasil disimpan & siap diproses.`, 'success', 'Transaksi Berhasil');
 
       const orderForPrint = {
         code: orderCode,
@@ -1036,45 +1233,29 @@
         cashier: (window.POS_DATA && window.POS_DATA.cashierName) || 'Siti Rahayu',
         customerName: custName,
         customerPhone: custPhone,
-        serviceName: isSatuan ? (STATE.posForm.variantId === 'var-bedcover' ? 'Cuci Satuan - Bed cover' : 'Cuci Satuan - Selimut') : activeSrv.name,
-        weight: weightVal,
-        unit: activeSrv.unit,
-        rate: isSatuan ? STATE.posForm.variantPrice : STATE.posForm.appliedRate,
-        subtotal: totalTagihan,
-        notes: notesCombined,
+        items: [...STATE.cartItems],
+        serviceName: STATE.cartItems.length === 1 ? STATE.cartItems[0].name : `${STATE.cartItems.length} Layanan Laundry`,
+        weight: STATE.cartItems.reduce((acc, it) => acc + it.weight, 0),
+        unit: 'kg',
+        rate: 0,
+        subtotal: finalTotal,
+        notes: allNotes,
         isPaid: STATE.posForm.isPaid,
         paymentMethod: STATE.posForm.paymentMethod,
-        deadlineAt: new Date(Date.now() + activeSrv.estHours * 3600 * 1000).toISOString(),
+        deadlineAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
         rackLocation: 'Rak A-01'
       };
 
       previewThermalReceipt(orderForPrint);
-      resetPosForm();
+      resetPosForm(true);
     })
     .catch(err => {
-      console.warn('Simpan via DB gagal, render fallback offline:', err);
-      const fallbackCode = 'LG-' + Math.floor(100000 + Math.random() * 900000);
-      showToast(`Pesanan ${fallbackCode} tersimpan.`);
-
-      const orderForPrint = {
-        code: fallbackCode,
-        createdAt: new Date().toISOString(),
-        cashier: (window.POS_DATA && window.POS_DATA.cashierName) || 'Siti Rahayu',
-        customerName: custName,
-        customerPhone: custPhone,
-        serviceName: isSatuan ? 'Cuci Satuan' : activeSrv.name,
-        weight: weightVal,
-        unit: activeSrv.unit,
-        rate: isSatuan ? STATE.posForm.variantPrice : STATE.posForm.appliedRate,
-        subtotal: totalTagihan,
-        notes: notesCombined,
-        isPaid: STATE.posForm.isPaid,
-        paymentMethod: STATE.posForm.paymentMethod,
-        deadlineAt: new Date(Date.now() + activeSrv.estHours * 3600 * 1000).toISOString(),
-        rackLocation: 'Rak A-01'
-      };
-      previewThermalReceipt(orderForPrint);
-      resetPosForm();
+      console.error('Simpan transaksi gagal:', err);
+      showToast(err.message || 'Gagal menyimpan transaksi. Periksa kembali data pesanan.', 'error', 'Gagal Simpan');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Simpan & cetak nota</span>';
+      }
     });
   }
 
@@ -1107,9 +1288,18 @@
               </div>
               <div class="receipt-dash-line"></div>
               <div>
-                ${order.serviceName}<br>
-                ${order.weight} ${order.unit} x ${formatRp(order.rate)} = ${formatRp(order.subtotal)}<br>
-                ${order.notes && order.notes.length ? `Catatan  : ${order.notes.join(', ')}<br>` : ''}
+                ${(order.items && order.items.length > 0) ? order.items.map(it => `
+                  <div style="margin-bottom: 5px;">
+                    <strong>${escapeHtmlAttr(it.name)}</strong><br>
+                    ${it.weight} ${it.unit} &times; ${formatRp(it.rate)} = ${formatRp(it.subtotal)}
+                    ${it.notes && it.notes.length ? `<br><small style="color:#64748B;">Catatan: ${escapeHtmlAttr(it.notes.join(', '))}</small>` : ''}
+                    ${it.customNote ? `<br><small style="color:#64748B;">Khusus: ${escapeHtmlAttr(it.customNote)}</small>` : ''}
+                  </div>
+                `).join('') : `
+                  ${order.serviceName}<br>
+                  ${order.weight} ${order.unit} x ${formatRp(order.rate)} = ${formatRp(order.subtotal)}<br>
+                  ${order.notes && order.notes.length ? `Catatan  : ${order.notes.join(', ')}<br>` : ''}
+                `}
                 Estimasi : ${formatDateTime(order.deadlineAt)}<br>
                 Lokasi   : ${order.rackLocation || 'Rak A-01'}
               </div>
@@ -1201,7 +1391,7 @@
 
       closeModal();
       renderPosWorkstation();
-      showToast(`Pelanggan '${newCust.name}' ditambahkan.`);
+      showToast(`Pelanggan baru '${newCust.name}' berhasil didaftarkan.`, 'success', 'Pelanggan Terdaftar');
     });
   }
 

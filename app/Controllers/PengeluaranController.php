@@ -35,13 +35,16 @@ class PengeluaranController {
     public function store(): void {
         Auth::requireRole(['Admin']);
 
-        $tgl = Helper::sanitize($_POST['tanggal_pengeluaran'] ?? date('Y-m-d'));
+        $tgl = trim($_POST['tanggal_pengeluaran'] ?? date('Y-m-d'));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl)) {
+            $tgl = date('Y-m-d');
+        }
         $kategori = Helper::sanitize($_POST['id_kategori_pengeluaran'] ?? '');
-        $keterangan = Helper::sanitize($_POST['keterangan'] ?? '');
+        $keterangan = trim(strip_tags($_POST['keterangan'] ?? ''));
         $jumlah = (float)($_POST['jumlah'] ?? 0);
 
-        if (empty($kategori) || empty($keterangan) || $jumlah <= 0) {
-            Helper::setFlash('error', 'Semua kolom pengeluaran wajib diisi dengan benar.');
+        if (empty($kategori) || mb_strlen($keterangan) < 3 || $jumlah <= 0 || $jumlah > 1000000000) {
+            Helper::setFlash('error', 'Semua kolom pengeluaran wajib diisi dengan benar. Nominal harus lebih dari 0 dan keterangan minimal 3 karakter.');
             Helper::redirect(Helper::url('pengeluaran'));
         }
 
@@ -62,13 +65,13 @@ class PengeluaranController {
         Auth::requireRole(['Admin']);
 
         $id = Helper::sanitize($_POST['id_pengeluaran'] ?? '');
-        $tgl = Helper::sanitize($_POST['tanggal_pengeluaran'] ?? date('Y-m-d H:i:s'));
+        $tgl = trim($_POST['tanggal_pengeluaran'] ?? date('Y-m-d H:i:s'));
         $kategori = Helper::sanitize($_POST['id_kategori_pengeluaran'] ?? '');
-        $keterangan = Helper::sanitize($_POST['keterangan'] ?? '');
+        $keterangan = trim(strip_tags($_POST['keterangan'] ?? ''));
         $jumlah = (float)($_POST['jumlah'] ?? 0);
 
-        if (empty($id) || empty($kategori) || empty($keterangan) || $jumlah <= 0) {
-            Helper::setFlash('error', 'Semua kolom pengeluaran wajib diisi dengan benar.');
+        if (empty($id) || empty($kategori) || mb_strlen($keterangan) < 3 || $jumlah <= 0 || $jumlah > 1000000000) {
+            Helper::setFlash('error', 'Semua kolom pengeluaran wajib diisi dengan benar. Nominal harus lebih dari 0.');
             Helper::redirect(Helper::url('pengeluaran'));
         }
 

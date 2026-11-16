@@ -27,14 +27,14 @@ class LayananController {
     public function store(): void {
         Auth::requireRole(['Admin']);
 
-        $nama = Helper::sanitize($_POST['nama_layanan'] ?? '');
+        $nama = trim(strip_tags($_POST['nama_layanan'] ?? ''));
         $harga = (float)($_POST['harga'] ?? 0);
         $estimasi = (int)($_POST['estimasi_waktu'] ?? 24);
         $satuan = Helper::sanitize($_POST['satuan'] ?? 'kg');
         $kategori = Helper::sanitize($_POST['id_kategori'] ?? '');
 
-        if (empty($nama) || $harga <= 0 || empty($kategori)) {
-            Helper::setFlash('error', 'Semua kolom layanan wajib diisi.');
+        if (mb_strlen($nama) < 2 || $harga <= 0 || $harga > 10000000 || $estimasi <= 0 || $estimasi > 720 || empty($kategori)) {
+            Helper::setFlash('error', 'Semua kolom layanan wajib diisi dengan benar. Tarif harus lebih dari 0 dan estimasi waktu 1-720 jam.');
             Helper::redirect(Helper::url('layanan'));
         }
 
@@ -56,15 +56,15 @@ class LayananController {
         Auth::requireRole(['Admin']);
 
         $id = Helper::sanitize($_POST['id_layanan'] ?? '');
-        $nama = Helper::sanitize($_POST['nama_layanan'] ?? '');
+        $nama = trim(strip_tags($_POST['nama_layanan'] ?? ''));
         $harga = (float)($_POST['harga'] ?? 0);
         $estimasi = (int)($_POST['estimasi_waktu'] ?? 24);
         $satuan = Helper::sanitize($_POST['satuan'] ?? 'kg');
         $kategori = Helper::sanitize($_POST['id_kategori'] ?? '');
         $status = isset($_POST['status_aktif']) ? 1 : 0;
 
-        if (empty($id) || empty($nama) || $harga <= 0) {
-            Helper::setFlash('error', 'Data layanan tidak valid.');
+        if (empty($id) || mb_strlen($nama) < 2 || $harga <= 0 || $harga > 10000000 || $estimasi <= 0 || $estimasi > 720) {
+            Helper::setFlash('error', 'Data layanan tidak valid. Pastikan tarif dan estimasi waktu bernilai positif.');
             Helper::redirect(Helper::url('layanan'));
         }
 

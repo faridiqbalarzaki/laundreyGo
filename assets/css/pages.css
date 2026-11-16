@@ -1,0 +1,209 @@
+/* ==========================================================================
+   LaundryGo Page-Level Modular Styles
+   Clean UI / Non-AI Slop — Dedicated Style Sheet
+   ========================================================================== */
+
+.is-orders-page {
+    padding: 0 !important;
+    height: auto !important;
+}
+
+.orders-table-card {
+    background: #FFFFFF;
+    border-radius: 14px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.orders-table-card .orders-table-scroll {
+    overflow-x: hidden !important;
+    width: 100%;
+}
+
+.orders-table-card .modern-table {
+    width: 100%;
+    table-layout: auto;
+    font-size: 0.74rem;
+    border-collapse: collapse;
+}
+
+.orders-table-card .modern-table th {
+    padding: 8px 6px;
+    font-size: 0.67rem;
+    font-weight: 700;
+    color: #64748B;
+    background: #F8FAFC;
+    white-space: nowrap;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.orders-table-card .modern-table td {
+    padding: 6px 6px;
+    vertical-align: middle;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.orders-table-card .modern-table tr:last-child td {
+    border-bottom: none;
+}
+
+.orders-table-card .orders-action-btn {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+    color: #0F172A;
+    transition: all 150ms ease;
+}
+
+.orders-table-card .orders-action-btn:hover {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+}
+
+.orders-table-card .orders-action-btn.btn-primary {
+    background: #0284C7;
+    color: #FFFFFF;
+    border: none;
+    padding: 0 16px;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
+}
+
+.orders-table-card .orders-action-btn.btn-primary:hover {
+    background: #0369A1;
+}
+
+.orders-table-card .orders-action-btn.btn-outline-pay {
+    border: 1.5px solid #0284C7 !important;
+    color: #0284C7 !important;
+    background: #FFFFFF !important;
+    padding: 0 14px;
+    font-weight: 700;
+}
+
+.orders-table-card .orders-action-btn.btn-outline-pay:hover {
+    background: #F0F9FF !important;
+}
+
+.orders-table-card .orders-delivered-chip {
+    font-size: 0.72rem;
+    color: #94A3B8;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.orders-table-card .ticket-tag-rack {
+    font-size: 0.70rem;
+    padding: 3px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #F0F9FF;
+    color: #0284C7;
+    border: 1px solid #E0F2FE;
+    border-radius: 9999px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.orders-table-card .orders-pay-badge {
+    font-size: 0.69rem;
+    padding: 2.5px 9px;
+    border-radius: 9999px;
+    font-weight: 600;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.orders-table-card .orders-pay-badge[data-paid="true"] {
+    background: #F0FDF4;
+    color: #16A34A;
+    border: 1px solid #DCFCE7;
+}
+
+.orders-table-card .orders-pay-badge[data-paid="false"] {
+    background: #FEF2F2;
+    color: #EF4444;
+    border: 1px solid #FEE2E2;
+}
+
+/* Pagination Dock & Sliding Active Bubble */
+#pagi-track-selesai {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+#pagi-track-selesai .wg-active-pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    background: linear-gradient(180deg, #FFFFFF 0%, #E0F2FE 100%);
+    border: 1px solid rgba(56, 189, 248, 0.48);
+    box-shadow: 0 2px 6px -1px rgba(2, 132, 199, 0.3), inset 0 1px 0 #FFFFFF;
+    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms ease-out;
+}
+
+#pagi-track-selesai .pagination-dot {
+    position: relative;
+    z-index: 2;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #475569;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    text-decoration: none !important;
+    transition: color 150ms ease, background-color 150ms ease, transform 120ms ease;
+}
+
+#pagi-track-selesai .pagination-dot:hover:not(.is-active) {
+    color: #0284C7;
+    background: rgba(2, 132, 199, 0.08);
+}
+
+#pagi-track-selesai .pagination-dot:active {
+    transform: scale(0.94);
+}
+
+#pagi-track-selesai .pagination-dot.is-active {
+    color: #0284C7 !important;
+    font-weight: 800 !important;
+    text-decoration: none !important;
+}
+
+#pagi-track-selesai .pagination-gap {
+    width: 18px;
+    min-width: 18px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px;
+    color: #94A3B8;
+}

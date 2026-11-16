@@ -21,29 +21,34 @@
         <link rel="stylesheet" href="<?= \App\Core\Helper::asset('css/style.css') ?>">
         <link rel="stylesheet" href="<?= \App\Core\Helper::asset('css/pos-app.css') ?>">
     <?php endif; ?>
+    <link rel="stylesheet" href="<?= \App\Core\Helper::asset('css/pages.css') ?>">
     <link rel="stylesheet" href="<?= \App\Core\Helper::asset('css/toast.css') ?>">
     <link rel="icon" type="image/png" href="<?= \App\Core\Helper::asset('img/logo_icon_drop.png') ?>">
 </head>
-<body class="theme-aqua">
+<?php 
+$isPosContext = (\App\Core\Auth::isKasir() || (isset($_GET['page']) && $_GET['page'] === 'pos'));
+$bodyClass = 'theme-aqua' . ($isPosContext ? ' is-pos' : '');
+?>
+<body class="<?= $bodyClass ?>">
     <!-- Modern Floating Toast Notification System (Aqua Design System) -->
-    <div id="flashToastContainer" class="flash-toast-container" aria-live="polite" role="region" aria-label="Notifikasi Sistem">
+    <div id="flashToastContainer" class="flash-toast-container <?= $isPosContext ? 'pos-mode' : '' ?>" aria-live="polite" role="region" aria-label="Notifikasi Sistem">
         <?php
         $flashTypes = [
             'success' => [
                 'title' => 'Berhasil',
-                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
             ],
             'error' => [
                 'title' => 'Terjadi Kesalahan',
-                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
             ],
             'warning' => [
                 'title' => 'Perhatian',
-                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
             ],
             'info' => [
                 'title' => 'Informasi',
-                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+                'icon' => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
             ]
         ];
 
@@ -51,23 +56,22 @@
             if (\App\Core\Helper::hasFlash($type)):
                 $msg = \App\Core\Helper::getFlash($type);
         ?>
-            <div class="flash-toast-item flash-toast-<?= $type ?>" role="alert" data-auto-dismiss="4500">
-                <div class="flash-toast-icon">
-                    <?= $meta['icon'] ?>
-                </div>
-                <div class="flash-toast-body">
-                    <div class="flash-toast-header">
-                        <span class="flash-toast-title"><?= $meta['title'] ?></span>
-                        <span class="flash-toast-timestamp">Baru saja</span>
+            <div class="flash-toast-item flash-toast-<?= $type ?>" role="alert" data-auto-dismiss="4200" style="--toast-duration: 4200ms;">
+                <div class="flash-toast-main">
+                    <div class="flash-toast-icon">
+                        <?= $meta['icon'] ?>
                     </div>
-                    <div class="flash-toast-message"><?= htmlspecialchars($msg) ?></div>
+                    <div class="flash-toast-body">
+                        <div class="flash-toast-header">
+                            <span class="flash-toast-title"><?= $meta['title'] ?></span>
+                        </div>
+                        <div class="flash-toast-message"><?= htmlspecialchars($msg) ?></div>
+                    </div>
+                    <button type="button" class="flash-toast-close" title="Tutup Notifikasi" aria-label="Tutup Notifikasi">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                 </div>
-                <button type="button" class="flash-toast-close" title="Tutup Notifikasi" aria-label="Tutup Notifikasi">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-                <div class="flash-toast-progress">
-                    <div class="flash-toast-progress-bar" style="animation-duration: 4500ms;"></div>
-                </div>
+                <div class="flash-toast-progress"></div>
             </div>
         <?php
             endif;
@@ -80,8 +84,8 @@
             if (!toast || toast.dataset.toastBound) return;
             toast.dataset.toastBound = 'true';
             
-            var duration = parseInt(toast.dataset.autoDismiss || '4500', 10);
-            var progressBar = toast.querySelector('.flash-toast-progress-bar');
+            var duration = parseInt(toast.dataset.autoDismiss || '4200', 10);
+            toast.style.setProperty('--toast-duration', duration + 'ms');
             var closeBtn = toast.querySelector('.flash-toast-close');
             
             var remainingTime = duration;
@@ -98,7 +102,7 @@
                     if (toast && toast.parentNode) {
                         toast.parentNode.removeChild(toast);
                     }
-                }, 320);
+                }, 180);
             }
 
             function pause() {
@@ -107,7 +111,6 @@
                     timer = null;
                     remainingTime -= (Date.now() - startTime);
                     toast.classList.add('is-paused');
-                    if (progressBar) progressBar.style.animationPlayState = 'paused';
                 }
             }
 
@@ -115,7 +118,6 @@
                 if (remainingTime > 0 && !isLeaving) {
                     startTime = Date.now();
                     toast.classList.remove('is-paused');
-                    if (progressBar) progressBar.style.animationPlayState = 'running';
                     timer = setTimeout(dismiss, remainingTime);
                 }
             }
@@ -130,9 +132,6 @@
             toast.addEventListener('mouseenter', pause);
             toast.addEventListener('mouseleave', resume);
 
-            if (progressBar) {
-                progressBar.style.animationDuration = duration + 'ms';
-            }
             startTime = Date.now();
             timer = setTimeout(dismiss, duration);
         }

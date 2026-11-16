@@ -3,202 +3,9 @@ $searchQuery = $_GET['q'] ?? '';
 $activeRak = $_GET['rak'] ?? 'Semua';
 $ordersList = $orders ?? [];
 
-// Helper spesifikasi data untuk presisi tampilan Foto 4
-$specMap = [
-    'LG-20261110-004' => ['service' => 'Cuci Kering + Setrika', 'spec' => '3.5 kg  Parfum Lavender', 'method' => ''],
-    'LG-20261110-006' => ['service' => 'Cuci Kering Saja', 'spec' => '4 kg  Parfum Ocean', 'method' => 'Tunai'],
-    'LG-20261113-007' => ['service' => 'Cuci Kering + Setrika (Kilat)', 'spec' => '2.5 kg  Parfum Lavender', 'method' => ''],
-    'LG-20261113-008' => ['service' => 'Cuci Kering Saja', 'spec' => '4 kg  Parfum Ocean', 'method' => 'Transfer BCA'],
-    'LG-20261113-009' => ['service' => 'Setrika Saja', 'spec' => '3 kg  Tanpa Parfum', 'method' => 'E-Wallet'],
-    'LG-20261113-010' => ['service' => 'Cuci Satuan', 'spec' => '1 item  Parfum Lavender', 'method' => 'Tunai'],
-    'LG-20261112-011' => ['service' => 'Cuci Kering + Setrika', 'spec' => '3.5 kg  Parfum Ocean', 'method' => 'Transfer BCA'],
-    'LG-20261112-012' => ['service' => 'Cuci Kering Saja (Kilat)', 'spec' => '2.5 kg  Tanpa Parfum', 'method' => 'E-Wallet'],
-];
 ?>
 
-<style>
-.is-orders-page {
-    padding: 0 !important;
-    height: auto !important;
-}
-.orders-table-card {
-    background: #FFFFFF;
-    border-radius: 14px;
-    border: 1px solid #E2E8F0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-.orders-table-card .orders-table-scroll {
-    overflow-x: hidden !important;
-    width: 100%;
-}
-.orders-table-card .modern-table {
-    width: 100%;
-    table-layout: auto;
-    font-size: 0.74rem;
-    border-collapse: collapse;
-}
-.orders-table-card .modern-table th {
-    padding: 8px 6px;
-    font-size: 0.67rem;
-    font-weight: 700;
-    color: #64748B;
-    background: #F8FAFC;
-    white-space: nowrap;
-    border-bottom: 1px solid #E2E8F0;
-}
-.orders-table-card .modern-table td {
-    padding: 6px 6px;
-    vertical-align: middle;
-    border-bottom: 1px solid #F1F5F9;
-}
-.orders-table-card .modern-table tr:last-child td {
-    border-bottom: none;
-}
-.orders-table-card .orders-action-btn {
-    height: 28px;
-    padding: 0 12px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    border-radius: 9999px;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid #E2E8F0;
-    background: #FFFFFF;
-    color: #0F172A;
-    transition: all 150ms ease;
-}
-.orders-table-card .orders-action-btn:hover {
-    background: #F8FAFC;
-    border-color: #CBD5E1;
-}
-.orders-table-card .orders-action-btn.btn-primary {
-    background: #0284C7;
-    color: #FFFFFF;
-    border: none;
-    padding: 0 16px;
-    font-weight: 700;
-    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
-}
-.orders-table-card .orders-action-btn.btn-primary:hover {
-    background: #0369A1;
-}
-.orders-table-card .orders-action-btn.btn-outline-pay {
-    border: 1.5px solid #0284C7 !important;
-    color: #0284C7 !important;
-    background: #FFFFFF !important;
-    padding: 0 14px;
-    font-weight: 700;
-}
-.orders-table-card .orders-action-btn.btn-outline-pay:hover {
-    background: #F0F9FF !important;
-}
-.orders-table-card .orders-delivered-chip {
-    font-size: 0.72rem;
-    color: #94A3B8;
-    font-weight: 500;
-    white-space: nowrap;
-}
-.orders-table-card .ticket-tag-rack {
-    font-size: 0.70rem;
-    padding: 3px 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: #F0F9FF;
-    color: #0284C7;
-    border: 1px solid #E0F2FE;
-    border-radius: 9999px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-.orders-table-card .orders-pay-badge {
-    font-size: 0.69rem;
-    padding: 2.5px 9px;
-    border-radius: 9999px;
-    font-weight: 600;
-    display: inline-block;
-    white-space: nowrap;
-}
-.orders-table-card .orders-pay-badge[data-paid="true"] {
-    background: #F0FDF4;
-    color: #16A34A;
-    border: 1px solid #DCFCE7;
-}
-.orders-table-card .orders-pay-badge[data-paid="false"] {
-    background: #FEF2F2;
-    color: #EF4444;
-    border: 1px solid #FEE2E2;
-}
 
-/* Pagination Dock & Sliding Active Bubble (Sesuai Desain Asli LaundryGo) */
-#pagi-track-selesai {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    flex-shrink: 0;
-}
-#pagi-track-selesai .wg-active-pill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    pointer-events: none;
-    z-index: 1;
-    opacity: 0;
-    background: linear-gradient(180deg, #FFFFFF 0%, #E0F2FE 100%);
-    border: 1px solid rgba(56, 189, 248, 0.48);
-    box-shadow: 0 2px 6px -1px rgba(2, 132, 199, 0.3), inset 0 1px 0 #FFFFFF;
-    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms ease-out;
-}
-#pagi-track-selesai .pagination-dot {
-    position: relative;
-    z-index: 2;
-    width: 28px;
-    min-width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 999px;
-    background: transparent;
-    color: #475569;
-    font-family: inherit;
-    font-size: 11.5px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    text-decoration: none !important;
-    transition: color 150ms ease, background-color 150ms ease, transform 120ms ease;
-}
-#pagi-track-selesai .pagination-dot:hover:not(.is-active) {
-    color: #0284C7;
-    background: rgba(2, 132, 199, 0.08);
-}
-#pagi-track-selesai .pagination-dot:active {
-    transform: scale(0.94);
-}
-#pagi-track-selesai .pagination-dot.is-active {
-    color: #0284C7 !important;
-    font-weight: 800 !important;
-    text-decoration: none !important;
-}
-#pagi-track-selesai .pagination-gap {
-    width: 18px;
-    min-width: 18px;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11.5px;
-    color: #94A3B8;
-}
-</style>
 
 <div class="page-sheet-container is-orders-page" style="display: flex; flex-direction: column; gap: 10px; padding: 0; height: auto;">
     <!-- Tier 1: Header Bar Cucian Selesai (Foto 4 / index.html) -->
@@ -265,12 +72,15 @@ $specMap = [
                             $rakLocation = $order['lokasi_rak'] ?: 'Rak C-01';
                             $statusDiserahkan = ($order['status_cucian'] === 'Sudah Diambil' || $order['status_cucian'] === 'Selesai');
                             
-                            // Ambil spesifikasi mapping atau fallback
-                            $specInfo = $specMap[$orderId] ?? null;
-                            $serviceTitle = $specInfo['service'] ?? ($order['daftar_layanan'] ?? $order['nama_layanan'] ?? 'Cuci Kering + Setrika');
-                            $serviceSub = $specInfo['spec'] ?? (($order['total_berat'] ? $order['total_berat'] . ' kg ' : '') . 'Parfum ' . ($order['parfum'] ?? 'Ocean Fresh'));
-                            $payMethod = $specInfo['method'] ?? ($order['metode_bayar'] ?? ($isLunas ? 'Tunai' : ''));
-                            $isWaSent = ($orderId !== 'LG-20261110-006'); // Hanya LG-20261110-006 yang berstatus Kabari WA
+                            // Ambil spesifikasi layanan murni dari database
+                            $serviceTitle = !empty($order['daftar_layanan']) ? $order['daftar_layanan'] : (!empty($order['nama_layanan']) ? $order['nama_layanan'] : 'Cuci Kering + Setrika');
+                            $beratVal = !empty($order['total_berat']) ? (float)$order['total_berat'] : 1;
+                            $satuanVal = !empty($order['satuan']) ? $order['satuan'] : 'kg';
+                            $parfumVal = !empty($order['parfum']) ? $order['parfum'] : 'Ocean Fresh';
+                            $serviceSub = "{$beratVal} {$satuanVal} • Parfum {$parfumVal}";
+                            $payMethod = !empty($order['metode_bayar']) ? $order['metode_bayar'] : ($isLunas ? 'Tunai' : '');
+                            $rakLocation = !empty($order['lokasi_rak']) ? $order['lokasi_rak'] : 'Belum di rak';
+                            $waMessage = urlencode("Halo {$order['nama_pelanggan']}, cucian Anda dengan nomor nota {$orderId} sudah selesai dan siap diambil di LaundryGo ({$rakLocation}). Total tagihan: " . ($isLunas ? 'Lunas' : \App\Core\Helper::rupiah($order['total_harga'] ?? 0)) . ". Terima kasih!");
                         ?>
                             <tr class="selesai-row-item <?= $statusDiserahkan ? 'is-delivered-row' : '' ?>">
                                 <td class="col-check"><input type="checkbox" class="row-check"></td>
@@ -303,36 +113,51 @@ $specMap = [
                                     <?= \App\Core\Helper::rupiah($order['total_harga'] ?? 0) ?>
                                 </td>
                                 <td style="text-align: center; white-space: nowrap;">
-                                    <?php if ($isWaSent): ?>
-                                        <button type="button" class="btn btn-secondary orders-action-btn" style="pointer-events: none; opacity: 0.85;">
-                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>
-                                            <span>WA Terkirim</span>
-                                        </button>
-                                    <?php else: ?>
-                                        <a href="https://wa.me/<?= $waClean ?>" target="_blank" class="btn btn-secondary orders-action-btn" style="text-decoration: none;" title="Hubungi Pelanggan via WhatsApp">
+                                    <?php if (!empty($waClean) && $waClean !== '-'): ?>
+                                        <a href="https://wa.me/<?= $waClean ?>?text=<?= $waMessage ?>" target="_blank" class="btn btn-secondary orders-action-btn" style="text-decoration: none;" title="Hubungi Pelanggan via WhatsApp">
                                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                                             <span>Kabari WA</span>
                                         </a>
+                                    <?php else: ?>
+                                        <span style="font-size: 0.72rem; color: #94A3B8;">Tanpa WA</span>
                                     <?php endif; ?>
                                 </td>
                                 <td style="text-align: center; white-space: nowrap;">
-                                    <?php if ($statusDiserahkan): ?>
-                                        <span class="orders-delivered-chip">Sudah diserahkan</span>
-                                    <?php elseif ($isLunas): ?>
-                                        <form action="<?= \App\Core\Helper::url('pesanan', ['action' => 'serahkan']) ?>" method="POST" style="display: inline;" onsubmit="return confirm('Serahkan cucian ke pelanggan?')">
-                                            <input type="hidden" name="id_pesanan" value="<?= $order['id_pesanan'] ?>">
-                                            <button type="submit" class="btn btn-primary orders-action-btn">
-                                                Serahkan
-                                            </button>
-                                        </form>
-                                    <?php else: ?>
-                                        <form action="<?= \App\Core\Helper::url('pesanan', ['action' => 'bayarDanSerahkan']) ?>" method="POST" style="display: inline;" onsubmit="return confirm('Terima pembayaran dan serahkan cucian?')">
-                                            <input type="hidden" name="id_pesanan" value="<?= $order['id_pesanan'] ?>">
-                                            <button type="submit" class="btn btn-secondary orders-action-btn btn-outline-pay">
-                                                Bayar &amp; Ambil
-                                            </button>
-                                        </form>
-                                    <?php endif; ?>
+                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                        <?php if ($statusDiserahkan): ?>
+                                            <span class="orders-delivered-chip">Sudah diserahkan</span>
+                                        <?php else: ?>
+                                            <?php if ($isLunas): ?>
+                                                <form action="<?= \App\Core\Helper::url('pesanan', ['action' => 'serahkan']) ?>" method="POST" style="display: inline;"
+                                                    data-confirm="true"
+                                                    data-confirm-title="Serahkan Cucian ke Pelanggan?"
+                                                    data-confirm-message="Pastikan fisik cucian telah diperiksa dengan teliti dan diserahkan ke pelanggan."
+                                                    data-confirm-badge="<?= htmlspecialchars($orderId) ?> &bull; <?= htmlspecialchars($order['nama_pelanggan'] ?? 'Pelanggan Umum') ?> &bull; <?= htmlspecialchars($rakLocation) ?>"
+                                                    data-confirm-btn="Ya, Serahkan Cucian"
+                                                    data-confirm-type="primary">
+                                                    <input type="hidden" name="id_pesanan" value="<?= $order['id_pesanan'] ?>">
+                                                    <button type="submit" class="btn btn-primary orders-action-btn">
+                                                        Serahkan
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <form action="<?= \App\Core\Helper::url('pesanan', ['action' => 'bayarDanSerahkan']) ?>" method="POST" style="display: inline;"
+                                                    data-confirm="true"
+                                                    data-confirm-title="Terima Pembayaran &amp; Serahkan Cucian?"
+                                                    data-confirm-message="Tagihan sebesar <?= \App\Core\Helper::rupiah($order['total_harga'] ?? 0) ?> akan diproses lunas dan pesanan diserahkan ke pelanggan."
+                                                    data-confirm-badge="<?= htmlspecialchars($orderId) ?> &bull; <?= htmlspecialchars($order['nama_pelanggan'] ?? 'Pelanggan Umum') ?> &bull; <?= \App\Core\Helper::rupiah($order['total_harga'] ?? 0) ?>"
+                                                    data-confirm-btn="Ya, Lunasi &amp; Serahkan"
+                                                    data-confirm-type="primary">
+                                                    <input type="hidden" name="id_pesanan" value="<?= $order['id_pesanan'] ?>">
+                                                    <button type="submit" class="btn btn-secondary orders-action-btn btn-outline-pay">
+                                                        Bayar &amp; Ambil
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+
+                                            <!-- Tombol Undur ke Lantai Produksi (Setrika Ulang) -->
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

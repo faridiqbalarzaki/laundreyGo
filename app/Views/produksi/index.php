@@ -1,7 +1,7 @@
 <?php
 $user = \App\Core\Auth::user();
-$nama = $user['nama_anggota'] ?? 'Budi Santoso';
-$username = $user['username'] ?? 'budi';
+$nama = !empty($user['nama_anggota']) ? $user['nama_anggota'] : 'Petugas Produksi';
+$username = !empty($user['username']) ? $user['username'] : 'petugas';
 $words = explode(' ', trim($nama));
 $initials = strtoupper(substr($words[0] ?? 'B', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : substr($words[0] ?? 'S', 1, 1)));
 
@@ -39,21 +39,8 @@ foreach ($allRawOrders as $row) {
         $isUrgent = true;
     }
 
-    // Format SLA text
-    $slaDisplay = $sla['text'] ?? '3j 59m';
-    if ($row['id_pesanan'] === 'LG-20261110-005') {
-        $isUrgent = true;
-        $slaDisplay = '13m 51d';
-    } elseif ($row['id_pesanan'] === 'LG-20261110-001') {
-        $slaDisplay = '3j 59m';
-        $isUrgent = false;
-    } elseif ($row['id_pesanan'] === 'LG-20261110-002') {
-        $slaDisplay = '37j 59m';
-        $isUrgent = false;
-    } elseif ($row['id_pesanan'] === 'LG-20261110-003') {
-        $slaDisplay = '17j 59m';
-        $isUrgent = false;
-    }
+    // Format SLA text (100% Terhitung Dinamis dari Tanggal Keluar Database)
+    $slaDisplay = $sla['text'] ?? ($isUrgent ? 'Mendesak' : 'Tepat Waktu');
 
     $weight = (float)($row['total_berat'] ?? 1);
     $subtotal = (float)($row['total_harga'] ?? $row['total_biaya'] ?? 0);
@@ -260,7 +247,7 @@ function checkSession() {
   } else if (params.get('open_rak')) {
     setTimeout(() => openSelesaiPilihRakModal(params.get('open_rak')), 120);
   } else if (params.get('show_toast')) {
-    setTimeout(() => showToast('Pesanan LG-20261110-001 dipindahkan ke dicuci.', true), 120);
+    const toastMsg = params.get('show_toast') !== '1' ? params.get('show_toast') : 'Status cucian berhasil diperbarui.'; setTimeout(() => showToast(toastMsg, true), 120);
   } else if (params.get('filter_stage')) {
     setTimeout(() => applyUnifiedFilter(params.get('filter_stage')), 120);
   } else if (params.get('search')) {
@@ -635,8 +622,22 @@ function renderFeed() {
           </div>
         </div>
 
-        <!-- Action Bar: Main Action Button + Round Label Tag Button -->
+        <!-- Action Bar: Undo Button + Main Action Button + Round Label Tag Button -->
         <div class="ticket-action-bar">
+          ${order.status === 'dicuci' ? `
+            <button type="button" class="btn-ticket-undo" title="Kembalikan ke antrean cuci"
+              onclick="confirmRevertOrderStatus('${escapeHtml(order.code)}', 'Antrean')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+              <span>Ke Antrean</span>
+            </button>
+          ` : ''}
+          ${order.status === 'disetrika' ? `
+            <button type="button" class="btn-ticket-undo" title="Kembalikan ke pencucian ulang"
+              onclick="confirmRevertOrderStatus('${escapeHtml(order.code)}', 'Dicuci')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+              <span>Ke Cuci</span>
+            </button>
+          ` : ''}
           <button type="button" class="btn-ticket-main ${flow.btnVariant}"
             onclick="${flow.isFinish ? `openSelesaiPilihRakModal('${escapeHtml(order.code)}')` : `advanceOrderStatus('${escapeHtml(order.code)}', '${flow.nextStatus}')`}">
             <span>${flow.actionBtnText}</span>
@@ -658,21 +659,35 @@ function renderFeed() {
    ======================================================================== */
 function tickSlaCountdowns() {
   let updatedAny = false;
+  const now = Date.now();
   STATE.orders.forEach(order => {
-    if (order.code === 'LG-20261110-005') {
-      // Countdown detik untuk kartu urgent LG-20261110-005
-      const parts = order.slaText.match(/(\d+)m\s+(\d+)d/);
-      if (parts) {
-        let m = parseInt(parts[1], 10);
-        let s = parseInt(parts[2], 10);
-        if (s > 0) {
-          s--;
-        } else if (m > 0) {
-          m--;
-          s = 59;
-        }
-        order.slaText = `${m}m ${String(s).padStart(2, '0')}d`;
+    if (!order.deadline) return;
+    const dl = new Date(order.deadline).getTime();
+    if (isNaN(dl)) return;
+    const diffMs = dl - now;
+    
+    if (diffMs <= 0) {
+      if (order.slaText !== 'Terlambat') {
+        order.slaText = 'Terlambat';
         order.isUrgent = true;
+        updatedAny = true;
+      }
+    } else if (diffMs <= 3600 * 1000) { // Kurang dari 1 jam: hitung mundur menit dan detik
+      const m = Math.floor(diffMs / 60000);
+      const s = Math.floor((diffMs % 60000) / 1000);
+      const newText = `${m}m ${String(s).padStart(2, '0')}d`;
+      if (order.slaText !== newText) {
+        order.slaText = newText;
+        order.isUrgent = true;
+        updatedAny = true;
+      }
+    } else if (diffMs <= 86400 * 1000) { // Kurang dari 24 jam: tampilkan jam dan menit
+      const h = Math.floor(diffMs / 3600000);
+      const m = Math.floor((diffMs % 3600000) / 60000);
+      const newText = `${h}j ${m}m`;
+      if (order.slaText !== newText) {
+        order.slaText = newText;
+        order.isUrgent = Boolean(order.isKilat);
         updatedAny = true;
       }
     }
@@ -729,6 +744,56 @@ function advanceOrderStatus(code, nextStatus) {
   });
 }
 
+function confirmRevertOrderStatus(code, targetStatus) {
+  const order = STATE.orders.find(o => o.code === code);
+  if (!order) return;
+
+  const targetLabel = (targetStatus === 'Antrean' || targetStatus === 'diterima') ? 'Antrean Cuci' : (targetStatus === 'Dicuci' ? 'Pencucian Ulang' : targetStatus);
+  const currentLabel = (order.status === 'dicuci') ? 'Sedang Dicuci' : ((order.status === 'disetrika') ? 'Sedang Disetrika' : order.status);
+
+  if (window.AquaModal && typeof window.AquaModal.confirm === 'function') {
+    window.AquaModal.confirm({
+      title: `Kembalikan ke ${targetLabel}?`,
+      badge: `${code} • ${order.customer || 'Pelanggan'} (${currentLabel})`,
+      message: `Status cucian akan diundurkan kembali ke tahap <strong>${targetLabel}</strong>. Catatan pengunduran akan disimpan secara rapi di riwayat pengerjaan.`,
+      confirmText: `Ya, Undur ke ${targetLabel}`,
+      cancelText: 'Batal',
+      onConfirm: () => {
+        executeRevertOrderStatus(code, targetStatus);
+      }
+    });
+  } else {
+    executeRevertOrderStatus(code, targetStatus);
+  }
+}
+
+function executeRevertOrderStatus(code, targetStatus) {
+  const order = STATE.orders.find(o => o.code === code);
+  if (!order) return;
+
+  const normTarget = (targetStatus === 'Antrean' || targetStatus === 'diterima') ? 'diterima' : targetStatus.toLowerCase();
+  order.status = normTarget;
+  renderFeed();
+  showToast(`Pesanan ${code} berhasil diundurkan ke ${targetStatus}.`, false);
+
+  const fd = new FormData();
+  fd.append('ajax', '1');
+  fd.append('id_pesanan', code);
+  fd.append('target_status', targetStatus);
+  fd.append('catatan', `Pengunduran status ke ${targetStatus} oleh petugas`);
+
+  fetch('<?= \App\Core\Helper::url("produksi", ["action" => "revert"]) ?>', {
+    method: 'POST',
+    body: fd
+  }).then(res => res.json()).then(data => {
+    if (!data.success) {
+      console.warn('Gagal revert di server:', data.message);
+    }
+  }).catch(err => {
+    console.error('Network revert error:', err);
+  });
+}
+
 function rollbackLastAction() {
   if (!STATE.lastActionRollback) return;
   const { code, prevStatus } = STATE.lastActionRollback;
@@ -744,6 +809,7 @@ function rollbackLastAction() {
     fd.append('ajax', '1');
     fd.append('id_pesanan', code);
     fd.append('target_status', prevStatus);
+    fd.append('catatan', 'Pembatalan status pengerjaan via toast');
 
     fetch('<?= \App\Core\Helper::url("produksi", ["action" => "revert"]) ?>', {
       method: 'POST',
@@ -1055,14 +1121,17 @@ function showToast(msg, withUndo = false) {
 
   tray.innerHTML = `
     <div class="toast-item">
-      <span>${escapeHtml(msg)}</span>
-      ${withUndo ? `<button type="button" class="toast-undo-btn" onclick="rollbackLastAction()">Batalkan</button>` : ''}
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span>${escapeHtml(msg)}</span>
+      </div>
+      ${withUndo ? `<button type="button" class="toast-undo-btn" onclick="rollbackLastAction()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg> <span>Urungkan</span></button>` : ''}
     </div>
   `;
 
   STATE.undoTimer = setTimeout(() => {
     tray.innerHTML = '';
-  }, 4500);
+  }, 5000);
 }
 
 // Start on DOM ready

@@ -9,10 +9,13 @@ class Pesanan {
     public static function all(?string $status = null, ?string $keyword = null): array {
         $sql = "SELECT ps.*, p.nama_pelanggan, p.no_telepon, p.alamat, a.nama_anggota,
                 (SELECT COUNT(*) FROM detail_pesanan d WHERE d.id_pesanan = ps.id_pesanan) AS total_item,
-                (SELECT string_agg(l.nama_layanan, ', ') 
+                (SELECT GROUP_CONCAT(l.nama_layanan SEPARATOR ', ') 
                  FROM detail_pesanan dp 
                  JOIN layanan l ON dp.id_layanan = l.id_layanan 
-                 WHERE dp.id_pesanan = ps.id_pesanan) AS daftar_layanan
+                 WHERE dp.id_pesanan = ps.id_pesanan) AS daftar_layanan,
+                COALESCE((SELECT SUM(dp.jumlah) FROM detail_pesanan dp WHERE dp.id_pesanan = ps.id_pesanan), 1) AS total_berat,
+                COALESCE((SELECT l.satuan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1), 'kg') AS satuan,
+                (SELECT mp.nama_metode FROM pembayaran pay JOIN metode_pembayaran mp ON pay.id_metode = mp.id_metode WHERE pay.id_pesanan = ps.id_pesanan ORDER BY pay.tanggal_pembayaran DESC LIMIT 1) AS metode_pembayaran
                 FROM pesanan ps
                 JOIN pelanggan p ON ps.id_pelanggan = p.id_pelanggan
                 LEFT JOIN anggota a ON ps.id_anggota = a.id_anggota
@@ -26,7 +29,7 @@ class Pesanan {
         }
 
         if ($keyword) {
-            $sql .= " AND (ps.id_pesanan ILIKE :kw OR p.nama_pelanggan ILIKE :kw OR p.no_telepon ILIKE :kw)";
+            $sql .= " AND (ps.id_pesanan LIKE :kw OR p.nama_pelanggan LIKE :kw OR p.no_telepon LIKE :kw)";
             $params['kw'] = '%' . $keyword . '%';
         }
 
@@ -121,7 +124,7 @@ class Pesanan {
                 'rak'           => $orderData['lokasi_rak'] ?? null,
                 'catatan'       => $orderData['catatan_khusus'] ?? '',
                 'parfum'        => $orderData['parfum'] ?? 'Ocean Fresh',
-                'kilat'         => !empty($orderData['is_kilat']) ? 'true' : 'false',
+                'kilat'         => !empty($orderData['is_kilat']) ? 1 : 0,
                 'pelanggan'     => $orderData['id_pelanggan'],
                 'anggota'       => $orderData['id_anggota'] ?? null
             ]);
@@ -131,9 +134,8 @@ class Pesanan {
                           VALUES (:id_det, :jml, :hrg, :id_pes, :id_lay)";
             $stmtDet = $pdo->prepare($sqlDetail);
 
-            $detIdx = 1;
             foreach ($itemsData as $item) {
-                $idDet = Helper::generateId('DET-', 'detail_pesanan', 'id_detail', 3) . '-' . $detIdx;
+                $idDet = Helper::generateId('DET-', 'detail_pesanan', 'id_detail', 3);
                 $stmtDet->execute([
                     'id_det' => $idDet,
                     'jml'    => $item['jumlah'],
@@ -141,7 +143,6 @@ class Pesanan {
                     'id_pes' => $idPesanan,
                     'id_lay' => $item['id_layanan']
                 ]);
-                $detIdx++;
             }
 
             // 3. Insert Pembayaran (jika langsung bayar)
@@ -199,8 +200,12 @@ class Pesanan {
             ];
 
             if ($rak !== null) {
-                $updateRakSql = ", lokasi_rak = :rak";
-                $params['rak'] = $rak;
+                if ($rak === '' || $rak === 'clear' || $rak === false) {
+                    $updateRakSql = ", lokasi_rak = NULL";
+                } else {
+                    $updateRakSql = ", lokasi_rak = :rak";
+                    $params['rak'] = $rak;
+                }
             }
 
             $sql = "UPDATE pesanan SET status_cucian = :status {$updateRakSql} WHERE id_pesanan = :id";
@@ -298,43 +303,39 @@ class Pesanan {
 
     /**
      * Mengambil daftar pesanan di lantai produksi (Antrean, Dicuci, Disetrika)
+     * Terintegrasi 100% database dengan prioritas Kilat, deadline tercepat, dan waktu masuk.
      */
     public static function getAntreanProduksi(): array {
         $sql = "SELECT ps.*, p.nama_pelanggan, p.no_telepon,
                 (SELECT l.nama_layanan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1) AS nama_layanan,
                 COALESCE((SELECT SUM(dp.jumlah) FROM detail_pesanan dp WHERE dp.id_pesanan = ps.id_pesanan), 1) AS total_berat,
                 COALESCE((SELECT l.satuan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1), 'kg') AS satuan,
-                (SELECT string_agg(l.nama_layanan || ' (' || dp.jumlah || ' ' || l.satuan || ')', ', ') 
+                (SELECT GROUP_CONCAT(CONCAT(l.nama_layanan, ' (', dp.jumlah, ' ', l.satuan, ')') SEPARATOR ', ') 
                  FROM detail_pesanan dp 
                  JOIN layanan l ON dp.id_layanan = l.id_layanan 
                  WHERE dp.id_pesanan = ps.id_pesanan) AS rincian_item
                 FROM pesanan ps
                 JOIN pelanggan p ON ps.id_pelanggan = p.id_pelanggan
                 WHERE ps.status_cucian IN ('Antrean', 'Dicuci', 'Disetrika')
-                ORDER BY 
-                    CASE 
-                        WHEN ps.id_pesanan = 'LG-20261110-001' THEN 1
-                        WHEN ps.id_pesanan = 'LG-20261110-005' THEN 2
-                        WHEN ps.id_pesanan = 'LG-20261110-002' THEN 3
-                        WHEN ps.id_pesanan = 'LG-20261110-003' THEN 4
-                        ELSE 5 
-                    END,
-                    ps.is_kilat DESC, ps.tanggal_keluar ASC";
+                ORDER BY ps.is_kilat DESC, ps.tanggal_keluar ASC, ps.tanggal_masuk ASC";
         return Database::query($sql);
     }
 
     /**
      * Mengambil daftar pesanan yang siap diambil di rak
+     * Terintegrasi 100% database tanpa data dummy
      */
     public static function getSiapAmbil(?string $rak = null, bool $includeCompleted = true): array {
         $statusCondition = $includeCompleted 
             ? "ps.status_cucian IN ('Siap Diambil', 'Selesai', 'Sudah Diambil')" 
             : "ps.status_cucian = 'Siap Diambil'";
 
-        $sql = "SELECT ps.*, p.nama_pelanggan, p.no_telepon,
+        $sql = "SELECT ps.*, p.nama_pelanggan, p.no_telepon, p.alamat,
                 (SELECT mp.nama_metode FROM pembayaran pay JOIN metode_pembayaran mp ON pay.id_metode = mp.id_metode WHERE pay.id_pesanan = ps.id_pesanan ORDER BY pay.tanggal_pembayaran DESC LIMIT 1) AS metode_bayar,
+                (SELECT GROUP_CONCAT(l.nama_layanan SEPARATOR ', ') FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan) AS daftar_layanan,
                 (SELECT l.nama_layanan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1) AS nama_layanan,
-                (SELECT SUM(dp.jumlah) FROM detail_pesanan dp WHERE dp.id_pesanan = ps.id_pesanan) AS total_berat
+                COALESCE((SELECT SUM(dp.jumlah) FROM detail_pesanan dp WHERE dp.id_pesanan = ps.id_pesanan), 1) AS total_berat,
+                COALESCE((SELECT l.satuan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1), 'kg') AS satuan
                 FROM pesanan ps
                 JOIN pelanggan p ON ps.id_pelanggan = p.id_pelanggan
                 WHERE $statusCondition";
@@ -345,49 +346,83 @@ class Pesanan {
             $params['rak'] = $rak;
         }
 
-        $sql .= " ORDER BY CASE 
-            WHEN ps.id_pesanan = 'LG-20261110-004' THEN 1
-            WHEN ps.id_pesanan = 'LG-20261110-006' THEN 2
-            WHEN ps.id_pesanan = 'LG-20261113-007' THEN 3
-            WHEN ps.id_pesanan = 'LG-20261113-008' THEN 4
-            WHEN ps.id_pesanan = 'LG-20261113-009' THEN 5
-            WHEN ps.id_pesanan = 'LG-20261113-010' THEN 6
-            WHEN ps.id_pesanan = 'LG-20261112-011' THEN 7
-            WHEN ps.id_pesanan = 'LG-20261112-012' THEN 8
-            ELSE 9 END, ps.id_pesanan ASC";
+        $sql .= " ORDER BY ps.tanggal_keluar DESC, ps.tanggal_masuk DESC, ps.id_pesanan DESC";
 
         return Database::query($sql, $params);
     }
 
     /**
-     * Menghitung metrik ringkasan untuk Dashboard
+     * Mengambil notifikasi gerai real-time dari database
+     * Menampilkan pesanan prioritas kilat yang aktif dan cucian yang siap diambil
+     */
+    public static function getStoreNotifications(int $limit = 8): array {
+        $sql = "SELECT ps.id_pesanan, ps.status_cucian, ps.status_pembayaran, ps.is_kilat, 
+                       ps.lokasi_rak, ps.tanggal_masuk, ps.tanggal_keluar, ps.total_harga,
+                       p.nama_pelanggan, p.no_telepon,
+                       (SELECT l.nama_layanan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1) AS nama_layanan
+                FROM pesanan ps
+                JOIN pelanggan p ON ps.id_pelanggan = p.id_pelanggan
+                WHERE (ps.is_kilat = 1 AND ps.status_cucian IN ('Antrean', 'Dicuci', 'Disetrika'))
+                   OR (ps.status_cucian = 'Siap Diambil')
+                ORDER BY ps.is_kilat DESC, 
+                         CASE WHEN ps.status_cucian = 'Siap Diambil' THEN 1 ELSE 2 END,
+                         ps.tanggal_masuk DESC
+                LIMIT " . (int)$limit;
+        return Database::query($sql);
+    }
+
+    /**
+     * Menghitung metrik ringkasan untuk Dashboard (100% Data Riil)
      */
     public static function getMetrics(): array {
-        // Omzet Hari Ini (Total pembayaran yang masuk hari ini)
+        // Omzet Hari Ini
         $sqlOmzet = "SELECT COALESCE(SUM(jumlah_bayar - uang_kembalian), 0) AS omzet_today
                      FROM pembayaran
                      WHERE DATE(tanggal_pembayaran) = CURRENT_DATE";
-        $omzet = Database::fetch($sqlOmzet)['omzet_today'] ?? 0;
+        $omzet = (float)(Database::fetch($sqlOmzet)['omzet_today'] ?? 0);
+
+        // Omzet Kemarin (untuk komparasi pertumbuhan persentase)
+        $sqlOmzetYesterday = "SELECT COALESCE(SUM(jumlah_bayar - uang_kembalian), 0) AS omzet_yesterday
+                              FROM pembayaran
+                              WHERE DATE(tanggal_pembayaran) = DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY)";
+        $omzetYesterday = (float)(Database::fetch($sqlOmzetYesterday)['omzet_yesterday'] ?? 0);
+
+        // Hitung persentase pertumbuhan omset
+        $growthPercent = 0.0;
+        if ($omzetYesterday > 0) {
+            $growthPercent = round((($omzet - $omzetYesterday) / $omzetYesterday) * 100, 1);
+        } elseif ($omzet > 0) {
+            $growthPercent = 100.0;
+        }
 
         // Antrean Produksi Aktif (Antrean, Dicuci, Disetrika)
         $sqlAktif = "SELECT COUNT(*) AS total_aktif FROM pesanan WHERE status_cucian IN ('Antrean', 'Dicuci', 'Disetrika')";
-        $aktif = Database::fetch($sqlAktif)['total_aktif'] ?? 0;
+        $aktif = (int)(Database::fetch($sqlAktif)['total_aktif'] ?? 0);
 
         // Siap Diambil di Rak
         $sqlSiap = "SELECT COUNT(*) AS total_siap FROM pesanan WHERE status_cucian = 'Siap Diambil'";
-        $siap = Database::fetch($sqlSiap)['total_siap'] ?? 0;
+        $siap = (int)(Database::fetch($sqlSiap)['total_siap'] ?? 0);
+
+        // Selesai atau Siap Diambil Hari ini
+        $sqlCompletedToday = "SELECT COUNT(*) AS completed_today FROM pesanan 
+                              WHERE DATE(tanggal_keluar) = CURRENT_DATE 
+                              AND status_cucian IN ('Siap Diambil', 'Sudah Diambil', 'Selesai')";
+        $completedToday = (int)(Database::fetch($sqlCompletedToday)['completed_today'] ?? 0);
 
         // Total Piutang (Pesanan belum lunas)
         $sqlPiutang = "SELECT COALESCE(SUM(total_harga), 0) AS total_piutang 
                        FROM pesanan 
                        WHERE status_pembayaran = 'Belum Lunas' AND status_cucian != 'Dibatalkan'";
-        $piutang = Database::fetch($sqlPiutang)['total_piutang'] ?? 0;
+        $piutang = (float)(Database::fetch($sqlPiutang)['total_piutang'] ?? 0);
 
         return [
-            'omzet_today'   => (float)$omzet,
-            'total_aktif'   => (int)$aktif,
-            'total_siap'    => (int)$siap,
-            'total_piutang' => (float)$piutang
+            'omzet_today'      => $omzet,
+            'omzet_yesterday'  => $omzetYesterday,
+            'growth_percent'   => $growthPercent,
+            'total_aktif'      => $aktif,
+            'total_siap'       => $siap,
+            'completed_today'  => $completedToday,
+            'total_piutang'    => $piutang
         ];
     }
 
@@ -409,7 +444,7 @@ class Pesanan {
         // Ambil omset 14 hari
         $sqlOmset = "SELECT DATE(tanggal_pembayaran) AS tgl, SUM(jumlah_bayar - uang_kembalian) AS total
                      FROM pembayaran
-                     WHERE tanggal_pembayaran >= CURRENT_DATE - INTERVAL '14 days'
+                     WHERE tanggal_pembayaran >= DATE_SUB(CURRENT_DATE, INTERVAL 14 DAY)
                      GROUP BY DATE(tanggal_pembayaran)";
         $resOmset = Database::query($sqlOmset);
         foreach ($resOmset as $row) {
@@ -422,7 +457,7 @@ class Pesanan {
         // Ambil pengeluaran 14 hari
         $sqlExp = "SELECT tanggal_pengeluaran AS tgl, SUM(jumlah) AS total
                    FROM pengeluaran
-                   WHERE tanggal_pengeluaran >= CURRENT_DATE - INTERVAL '14 days'
+                   WHERE tanggal_pengeluaran >= DATE_SUB(CURRENT_DATE, INTERVAL 14 DAY)
                    GROUP BY tanggal_pengeluaran";
         $resExp = Database::query($sqlExp);
         foreach ($resExp as $row) {

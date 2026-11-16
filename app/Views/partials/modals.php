@@ -9,11 +9,12 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="newCustNama">Nama Lengkap Pelanggan:</label>
-                    <input type="text" name="nama_pelanggan" id="newCustNama" class="form-input" required placeholder="Contoh: Amanda Putri">
+                    <input type="text" name="nama_pelanggan" id="newCustNama" class="form-input" required placeholder="Contoh: Amanda Putri" minlength="2" maxlength="100" pattern="^[a-zA-Z\s\.\'\-]+$" title="Nama hanya boleh berisi huruf, spasi, titik (min 2 karakter)">
                 </div>
                 <div class="form-group">
                     <label for="newCustTelp">Nomor WhatsApp / HP:</label>
-                    <input type="tel" name="no_telepon" id="newCustTelp" class="form-input" required placeholder="Contoh: 081234567890">
+                    <input type="tel" name="no_telepon" id="newCustTelp" class="form-input" required placeholder="Contoh: 081234567890" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" pattern="^(\+62|62|08)[0-9]{8,13}$" title="Nomor HP Indonesia yang valid: diawali 08, 62, atau +62 (10-15 digit)">
+                    <small style="color: #64748b; font-size: 0.72rem; margin-top: 3px; display: block;">Format nomor HP: contoh 08123456789 (10-15 digit)</small>
                 </div>
                 <div class="form-group">
                     <label for="newCustAlamat">Alamat Tempat Tinggal:</label>

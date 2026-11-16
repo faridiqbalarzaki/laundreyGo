@@ -89,6 +89,14 @@ class Anggota {
         return Database::execute($sql, ['id' => $id]);
     }
 
+        public static function updatePassword(string $id, string $newPassword): bool {
+        $sql = "UPDATE anggota SET password = :password WHERE id_anggota = :id";
+        return Database::execute($sql, [
+            'id'       => $id,
+            'password' => password_hash($newPassword, PASSWORD_BCRYPT)
+        ]);
+    }
+
     public static function getRoles(): array {
         return Database::query("SELECT * FROM role ORDER BY id_role ASC");
     }

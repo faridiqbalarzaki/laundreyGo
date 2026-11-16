@@ -15,7 +15,7 @@ foreach ($ordersList as $row) {
     $statusKey = 'antrean';
     if (str_contains($rawStatus, 'cuci')) $statusKey = 'dicuci';
     elseif (str_contains($rawStatus, 'setrika')) $statusKey = 'disetrika';
-    elseif (str_contains($rawStatus, 'siap')) $statusKey = 'siap_diambil';
+    elseif (str_contains($rawStatus, 'siap')) $statusKey = 'siap diambil';
     elseif (str_contains($rawStatus, 'selesai') || str_contains($rawStatus, 'ambil')) $statusKey = 'selesai';
 
     $serv = $row['daftar_layanan'] ?? $row['nama_layanan'] ?? 'Cuci Kering + Setrika';

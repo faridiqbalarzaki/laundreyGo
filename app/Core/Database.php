@@ -19,12 +19,14 @@ class Database {
         if (self::$instance === null) {
             $config = require __DIR__ . '/../../config/database.php';
 
+            $charsetStr = ($config['driver'] === 'mysql') ? ';charset=utf8mb4' : '';
             $dsn = sprintf(
-                "%s:host=%s;port=%d;dbname=%s",
+                "%s:host=%s;port=%d;dbname=%s%s",
                 $config['driver'],
                 $config['host'],
                 $config['port'],
-                $config['database']
+                $config['database'],
+                $charsetStr
             );
 
             try {
@@ -37,14 +39,13 @@ class Database {
             } catch (PDOException $e) {
                 // Tampilkan pesan error ramah mahasiswa jika database belum konek
                 die("<div style='font-family:sans-serif;max-width:600px;margin:50px auto;padding:25px;border:1px solid #f87171;border-radius:12px;background:#fef2f2;color:#991b1b;'>
-                    <h2 style='margin-top:0;'>⚠️ Gagal Terhubung ke Database PostgreSQL</h2>
+                    <h2 style='margin-top:0;'>⚠️ Gagal Terhubung ke Database MySQL</h2>
                     <p>Pesan error: <code>" . htmlspecialchars($e->getMessage()) . "</code></p>
                     <hr style='border:0;border-top:1px solid #fca5a5;margin:15px 0;'>
                     <p><strong>Langkah penyelesaian:</strong></p>
                     <ol style='padding-left:20px;line-height:1.6;'>
-                        <li>Pastikan PostgreSQL sudah di-Start di Laragon / Services.</li>
-                        <li>Pastikan password di <code>config/database.php</code> sudah sesuai.</li>
-                        <li>Jalankan migrasi database via terminal: <br><code>php database/migrate.php</code></li>
+                        <li>Pastikan MySQL sudah di-Start di Laragon (Port 3306).</li>
+                        <li>Pastikan database <code>laundrygo</code> sudah dimigrasikan via: <br><code>php database/migrate_mysql.php</code></li>
                     </ol>
                 </div>");
             }

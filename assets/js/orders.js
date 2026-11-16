@@ -160,7 +160,7 @@
     return STATE.orders.filter(o => {
       // Status filter
       if (f.statuses.length > 0) {
-        const hit = f.statuses.includes(o.status);
+        const hit = f.statuses.includes(o.status) || f.statuses.includes(o.status.replace(/_/g, ' ')) || f.statuses.includes(o.status.replace(/ /g, '_'));
         if ((f.statusMode === 'exclude' && hit) || (f.statusMode !== 'exclude' && !hit)) {
           return false;
         }
@@ -505,7 +505,7 @@
           </td>
           <td>
             <div style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px 5px;">
-              <span class="table-order-code num-tabular" style="font-weight: 700; color: var(--ink); font-size: 0.83rem;">${escapeHtml(order.code)}</span>
+              <span class="table-order-code num-tabular" style="font-weight: 700; color: var(--primary); font-size: 0.83rem; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color 0.2s;" onmouseover="this.style.textDecorationColor='currentColor'" onmouseout="this.style.textDecorationColor='transparent'" onclick="if(typeof openOrderDrawer==='function')openOrderDrawer('${escapeHtml(order.code)}')" title="Klik untuk kelola alur & rincian">${escapeHtml(order.code)}</span>
               ${order.isKilat ? `<span class="table-kilat-chip">Kilat</span>` : ''}
             </div>
           </td>
@@ -538,6 +538,10 @@
           </td>
           <td style="text-align: center;">
             <div style="display: inline-flex; gap: 4px; justify-content: center;">
+              <button type="button" class="btn btn-secondary orders-action-btn" title="Kelola Alur & Rincian" style="color: var(--primary); font-weight: 700;"
+                onclick="if(typeof openOrderDrawer==='function')openOrderDrawer('${escapeHtml(order.code)}')">
+                Alur
+              </button>
               <button type="button" class="btn btn-secondary orders-action-btn"
                 onclick="window.ORDERS_APP.previewReceipt('${escapeHtml(order.code)}')">
                 Nota

@@ -217,9 +217,13 @@
                 <label for="quick-track-code" class="login-field-label">Nomor Nota / Invoice</label>
                 <div class="track-search-row">
                   <input type="text" id="quick-track-code" class="form-control num-tabular"
-                    value="" placeholder="Masukkan nomor nota"
+                    value="" placeholder="Contoh: LG-261114-001" autocomplete="off" spellcheck="false"
+                    oninput="handleTrackInputMask(this)"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();submitTrackSearch();}">
                   <button type="button" class="btn btn-primary" style="flex-shrink: 0; padding: 0 16px;" onclick="submitTrackSearch()">Cek Nota</button>
+                </div>
+                <div id="track-input-hint" style="font-size: 0.72rem; margin-top: 6px; color: var(--ink-muted); transition: color 0.2s ease;">
+                  Format nota resmi: <strong style="color: var(--primary);">LG-YYMMDD-XXX</strong> (lihat pada struk fisik)
                 </div>
               </div>
             </div>
@@ -279,12 +283,52 @@ function toggleLoginPasswordVisibility() {
     }
 }
 
+function handleTrackInputMask(input) {
+    // Sanitasi real-time: otomatis huruf besar dan hanya izinkan karakter A-Z, 0-9, dan dash (-)
+    let val = input.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+    input.value = val;
+
+    const hint = document.getElementById('track-input-hint');
+    if (val.length > 0 && !val.startsWith('LG-') && !val.startsWith('L')) {
+        if (hint) {
+            hint.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">💡 Tip: Nomor nota kasir selalu diawali dengan <strong>LG-</strong></span>`;
+        }
+    } else if (hint) {
+        hint.innerHTML = `Format nota resmi: <strong style="color: var(--primary);">LG-YYMMDD-XXX</strong> (lihat pada struk fisik)`;
+    }
+}
+
 function submitTrackSearch() {
-    const code = document.getElementById('quick-track-code').value.trim();
-    if (!code) {
-        alert('Ketik nomor nota terlebih dahulu!');
+    const inputEl = document.getElementById('quick-track-code');
+    const rawCode = inputEl.value.trim();
+    const hint = document.getElementById('track-input-hint');
+
+    if (!rawCode) {
+        if (typeof showToast === 'function') {
+            showToast('Ketik nomor nota fisik Anda terlebih dahulu!', 'warning', 'Nomor Nota Kosong');
+        }
+        if (hint) {
+            hint.innerHTML = `<span style="color: #ef4444; font-weight: 600;">⚠️ Kolom nomor nota wajib diisi. Contoh: <strong>LG-261114-001</strong></span>`;
+        }
+        inputEl.focus();
         return;
     }
+
+    const code = rawCode.toUpperCase();
+    const notaRegex = /^LG-[0-9]{6,8}-[0-9]{3,4}$/;
+
+    if (!notaRegex.test(code)) {
+        if (typeof showToast === 'function') {
+            showToast(`Format nota "${code}" tidak valid! Contoh yang benar: LG-261114-001`, 'error', 'Format Tidak Sesuai');
+        }
+        if (hint) {
+            hint.innerHTML = `<span style="color: #ef4444; font-weight: 600;">⚠️ Format nota tidak sesuai standar. Contoh: <strong>LG-261114-001</strong></span>`;
+        }
+        inputEl.classList.add('is-invalid');
+        inputEl.focus();
+        return;
+    }
+
     window.location.href = `index.php?page=tracking&nota=${encodeURIComponent(code)}`;
 }
 </script>

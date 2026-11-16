@@ -1158,6 +1158,35 @@
       color: #059669;
     }
 
+    .btn-ticket-undo {
+      height: 38px;
+      padding: 0 12px;
+      border-radius: var(--radius-pill);
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      color: #64748B;
+      font-family: var(--font-main);
+      font-size: 11.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 140ms ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-ticket-undo:hover {
+      background: #F8FAFC;
+      border-color: #CBD5E1;
+      color: #0F172A;
+    }
+
+    .btn-ticket-undo:active {
+      transform: scale(0.96);
+    }
+
     .btn-ticket-circle {
       width: 38px;
       height: 38px;
@@ -1516,12 +1545,12 @@
     /* Toast Notification Tray */
     .toast-tray {
       position: fixed;
-      bottom: 20px;
+      bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
       width: calc(100% - 28px);
-      max-width: 412px;
+      max-width: 440px;
       pointer-events: none;
       display: flex;
       flex-direction: column;
@@ -1530,18 +1559,21 @@
 
     .toast-item {
       pointer-events: auto;
-      background: #0F172A;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: #FFFFFF;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 0.78rem;
+      padding: 10px 16px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 0.8rem;
       font-weight: 600;
-      box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.4);
+      box-shadow: 0 12px 30px -6px rgba(15, 23, 42, 0.35);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      animation: toastIn 200ms ease-out;
+      gap: 12px;
+      animation: toastIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     @keyframes toastIn {
@@ -1550,14 +1582,24 @@
     }
 
     .toast-undo-btn {
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: #0284c7;
+      border: none;
       color: #FFFFFF;
-      padding: 3px 8px;
-      border-radius: var(--radius-pill);
-      font-size: 0.7rem;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 0.74rem;
       font-weight: 700;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 150ms ease;
+      flex-shrink: 0;
+    }
+
+    .toast-undo-btn:hover {
+      background: #0369a1;
+      transform: scale(1.03);
     }
 
     /* Login Screen Mobile */

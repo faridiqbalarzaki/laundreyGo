@@ -216,7 +216,13 @@ if ($activeKategori !== 'Semua') {
                                             style="border: 1px solid #e2e8f0; background: #ffffff; color: #334155; font-size: 0.75rem; font-weight: 600; padding: 5px 14px; border-radius: 9999px; cursor: pointer; transition: all 0.15s ease;">
                                             Edit
                                         </button>
-                                        <form action="<?= \App\Core\Helper::url('pengeluaran', ['action' => 'delete']) ?>" method="POST" style="margin: 0; display: inline;" onsubmit="return confirm('Hapus catatan pengeluaran \'<?= addslashes($item['keterangan']) ?>\'?')">
+                                        <form action="<?= \App\Core\Helper::url('pengeluaran', ['action' => 'delete']) ?>" method="POST" style="margin: 0; display: inline;"
+                                            data-confirm="true"
+                                            data-confirm-title="Hapus Catatan Pengeluaran?"
+                                            data-confirm-message="Catatan belanja pengeluaran ini akan dihapus dari buku operasional gerai."
+                                            data-confirm-badge="<?= htmlspecialchars($item['keterangan']) ?> &bull; <?= \App\Core\Helper::rupiah($item['jumlah']) ?>"
+                                            data-confirm-btn="Ya, Hapus Catatan"
+                                            data-confirm-type="danger">
                                             <input type="hidden" name="id_pengeluaran" value="<?= $item['id_pengeluaran'] ?>">
                                             <button type="submit" class="btn-expense-del"
                                                 style="border: 1px solid #fecaca; background: #ffffff; color: #ef4444; font-size: 0.75rem; font-weight: 600; padding: 5px 14px; border-radius: 9999px; cursor: pointer; transition: all 0.15s ease;">

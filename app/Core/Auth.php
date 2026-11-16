@@ -24,6 +24,11 @@ class Auth {
             } elseif ($r === 'petugas') {
                 $_SESSION['user'] = ['id_anggota' => 'USR-003', 'username' => 'petugas', 'nama_anggota' => 'Budi Santoso', 'id_role' => 'PET', 'nama_role' => 'Petugas Produksi'];
             }
+
+            if (!empty($_GET['test_flash'])) {
+                $t = $_GET['test_flash'];
+                $_SESSION['flash'][$t] = $_GET['test_msg'] ?? 'Selamat datang kembali, Kasir Outlet!';
+            }
         }
     }
 

@@ -45,10 +45,36 @@ class PosController {
 
         // Jika pelanggan baru diinput langsung (inline)
         if (empty($idPelanggan) && !empty($input['nama_pelanggan_baru'])) {
+            $rawNama = trim(strip_tags($input['nama_pelanggan_baru']));
+            $rawTelp = trim($input['no_telepon_baru'] ?? '');
+
+            // Validasi format nama pelanggan baru
+            if (mb_strlen($rawNama) < 2 || mb_strlen($rawNama) > 100 || !preg_match('/^[a-zA-Z\s\.\'\-]+$/u', $rawNama)) {
+                if ($jsonData) {
+                    Helper::jsonResponse(['success' => false, 'message' => 'Nama pelanggan baru tidak valid! Hanya boleh huruf, spasi, titik (min 2 karakter).'], 400);
+                }
+                Helper::setFlash('error', 'Nama pelanggan baru tidak valid!');
+                Helper::redirect(Helper::url('pos'));
+            }
+
+            // Validasi nomor telepon jika diisi
+            if (!empty($rawTelp) && $rawTelp !== '-') {
+                if (!Helper::isValidPhone($rawTelp)) {
+                    if ($jsonData) {
+                        Helper::jsonResponse(['success' => false, 'message' => 'Nomor HP pelanggan baru tidak valid! Contoh format yang benar: 08123456789.'], 400);
+                    }
+                    Helper::setFlash('error', 'Nomor telepon pelanggan baru tidak valid!');
+                    Helper::redirect(Helper::url('pos'));
+                }
+                $rawTelp = Helper::normalizePhone($rawTelp);
+            } else {
+                $rawTelp = '-';
+            }
+
             $idPelanggan = Pelanggan::create([
-                'nama_pelanggan' => Helper::sanitize($input['nama_pelanggan_baru']),
-                'no_telepon'     => Helper::sanitize($input['no_telepon_baru'] ?? '-'),
-                'alamat'         => Helper::sanitize($input['alamat_baru'] ?? '')
+                'nama_pelanggan' => $rawNama,
+                'no_telepon'     => $rawTelp,
+                'alamat'         => trim(strip_tags($input['alamat_baru'] ?? ''))
             ]);
         }
 
@@ -68,13 +94,21 @@ class PosController {
             Helper::redirect(Helper::url('pos'));
         }
 
-        // Hitung total harga
+        // Hitung total harga & validasi jumlah > 0 dan <= 500
         $totalHarga = 0;
         $itemsData = [];
         foreach ($items as $item) {
             $layanan = Layanan::findById($item['id_layanan']);
             if ($layanan) {
-                $qty = (float)$item['jumlah'];
+                $qty = (float)($item['jumlah'] ?? 0);
+                if ($qty <= 0 || $qty > 500) {
+                    if ($jsonData) {
+                        Helper::jsonResponse(['success' => false, 'message' => 'Berat atau jumlah layanan harus lebih dari 0 dan maksimal 500!'], 400);
+                    }
+                    Helper::setFlash('error', 'Berat atau jumlah layanan harus lebih dari 0 dan maksimal 500!');
+                    Helper::redirect(Helper::url('pos'));
+                }
+
                 $subtotal = $qty * (float)$layanan['harga'];
                 $totalHarga += $subtotal;
 
@@ -85,6 +119,14 @@ class PosController {
                     'estimasi_waktu' => (int)$layanan['estimasi_waktu']
                 ];
             }
+        }
+
+        if (empty($itemsData)) {
+            if ($jsonData) {
+                Helper::jsonResponse(['success' => false, 'message' => 'Layanan yang dipilih tidak valid atau belum terdaftar!'], 400);
+            }
+            Helper::setFlash('error', 'Layanan yang dipilih tidak valid!');
+            Helper::redirect(Helper::url('pos'));
         }
 
         // Cek Pembayaran
@@ -106,6 +148,14 @@ class PosController {
                 'nanti'    => 'MET-04'
             ];
             $idMetode = $methodMap[strtolower($rawMetode)] ?? $rawMetode;
+
+            if ($idMetode === 'MET-01' && $jumlahBayar < $totalHarga) {
+                if ($jsonData) {
+                    Helper::jsonResponse(['success' => false, 'message' => 'Uang tunai yang dibayarkan kurang dari total tagihan!'], 400);
+                }
+                Helper::setFlash('error', 'Uang tunai kurang dari total tagihan!');
+                Helper::redirect(Helper::url('pos'));
+            }
 
             if ($jumlahBayar >= $totalHarga) {
                 $statusPembayaran = 'Lunas';

@@ -24,13 +24,31 @@ class PenggunaController {
     public function store(): void {
         Auth::requireRole(['Admin']);
 
-        $username = Helper::sanitize($_POST['username'] ?? '');
+        $username = trim(strip_tags($_POST['username'] ?? ''));
         $password = $_POST['password'] ?? '';
-        $nama = Helper::sanitize($_POST['nama_anggota'] ?? '');
+        $nama = trim(strip_tags($_POST['nama_anggota'] ?? ''));
         $role = Helper::sanitize($_POST['id_role'] ?? 'KAS');
 
         if (empty($username) || empty($password) || empty($nama)) {
             Helper::setFlash('error', 'Semua data pengguna wajib diisi.');
+            Helper::redirect(Helper::url('pengguna'));
+        }
+
+        // Validasi format username (alphanumeric & underscore 3-30 karakter)
+        if (!Helper::isValidUsername($username)) {
+            Helper::setFlash('error', 'Username tidak valid. Gunakan huruf, angka, atau underscore tanpa spasi (3-30 karakter).');
+            Helper::redirect(Helper::url('pengguna'));
+        }
+
+        // Validasi panjang password minimal 6 karakter
+        if (strlen($password) < 6) {
+            Helper::setFlash('error', 'Password pengguna minimal terdiri dari 6 karakter.');
+            Helper::redirect(Helper::url('pengguna'));
+        }
+
+        // Validasi nama anggota
+        if (mb_strlen($nama) < 2 || mb_strlen($nama) > 100 || !preg_match('/^[a-zA-Z\s\.\'\-]+$/u', $nama)) {
+            Helper::setFlash('error', 'Nama pengguna hanya boleh berisi huruf dan spasi (min 2 karakter).');
             Helper::redirect(Helper::url('pengguna'));
         }
 
@@ -59,14 +77,32 @@ class PenggunaController {
         Auth::requireRole(['Admin']);
 
         $id = Helper::sanitize($_POST['id_anggota'] ?? '');
-        $username = Helper::sanitize($_POST['username'] ?? '');
+        $username = trim(strip_tags($_POST['username'] ?? ''));
         $password = $_POST['password'] ?? '';
-        $nama = Helper::sanitize($_POST['nama_anggota'] ?? '');
+        $nama = trim(strip_tags($_POST['nama_anggota'] ?? ''));
         $role = Helper::sanitize($_POST['id_role'] ?? 'KAS');
         $status = isset($_POST['status_aktif']) ? 1 : 0;
 
         if (empty($id) || empty($username) || empty($nama)) {
             Helper::setFlash('error', 'Data pengguna tidak valid.');
+            Helper::redirect(Helper::url('pengguna'));
+        }
+
+        // Validasi username
+        if (!Helper::isValidUsername($username)) {
+            Helper::setFlash('error', 'Username tidak valid. Gunakan huruf, angka, atau underscore tanpa spasi (3-30 karakter).');
+            Helper::redirect(Helper::url('pengguna'));
+        }
+
+        // Jika password diisi, validasi min 6 karakter
+        if (!empty($password) && strlen($password) < 6) {
+            Helper::setFlash('error', 'Password baru minimal terdiri dari 6 karakter.');
+            Helper::redirect(Helper::url('pengguna'));
+        }
+
+        // Validasi nama
+        if (mb_strlen($nama) < 2 || mb_strlen($nama) > 100 || !preg_match('/^[a-zA-Z\s\.\'\-]+$/u', $nama)) {
+            Helper::setFlash('error', 'Nama pengguna hanya boleh berisi huruf dan spasi (min 2 karakter).');
             Helper::redirect(Helper::url('pengguna'));
         }
 

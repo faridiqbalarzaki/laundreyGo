@@ -49,6 +49,51 @@ class DashboardController {
         $unpaidCount = (int)($unpaidInfo['total_count'] ?? 0);
         $unpaidTotal = (float)($unpaidInfo['total_nominal'] ?? 0);
 
+        // Dynamic Calculations
+        $omzet = (float)($metrics['omzet_today'] ?? 0);
+        $netProfit = $omzet - $expToday;
+        $cashEfficiency = $omzet > 0 ? max(0, min(100, round(($netProfit / $omzet) * 100))) : ($expToday > 0 ? 0 : 100);
+
+        $activeTotal = (int)($metrics['total_aktif'] ?? 0);
+        $readyTotal = (int)($metrics['total_siap'] ?? 0);
+        $completedRatio = ($activeTotal + $readyTotal) > 0 ? round(($readyTotal / ($activeTotal + $readyTotal)) * 100) : 100;
+
+        // Payment method distribution today (Tunai vs Digital)
+        $sqlPaymentDist = "SELECT mp.nama_metode, COALESCE(SUM(pb.jumlah_bayar - pb.uang_kembalian), 0) AS total
+                           FROM metode_pembayaran mp
+                           LEFT JOIN pembayaran pb ON mp.id_metode = pb.id_metode AND DATE(pb.tanggal_pembayaran) = CURRENT_DATE
+                           GROUP BY mp.id_metode, mp.nama_metode";
+        $paymentDist = Database::query($sqlPaymentDist);
+        $cashTotal = 0;
+        $allPayTotal = 0;
+        foreach ($paymentDist as $pd) {
+            $amt = (float)$pd['total'];
+            $allPayTotal += $amt;
+            if (stripos($pd['nama_metode'], 'Tunai') !== false) {
+                $cashTotal += $amt;
+            }
+        }
+        $cashPercent = $allPayTotal > 0 ? round(($cashTotal / $allPayTotal) * 100) : 100;
+
+        // Generate dynamic SVG sparkline coordinates (viewBox 0 0 300 70)
+        $maxSparkVal = 1;
+        foreach ($chartData as $cd) {
+            if ($cd['omset'] > $maxSparkVal) $maxSparkVal = $cd['omset'];
+        }
+        $polyPoints = [];
+        $stepX = 300 / max(1, count($chartData) - 1);
+        foreach (array_values($chartData) as $idx => $cd) {
+            $x = round($idx * $stepX, 1);
+            $ratio = $maxSparkVal > 0 ? ($cd['omset'] / $maxSparkVal) : 0;
+            $y = round(58 - ($ratio * 46), 1);
+            $polyPoints[] = "{$x},{$y}";
+        }
+        $sparkPolyline = implode(' ', $polyPoints);
+        $sparkPolygon = "0,70 " . $sparkPolyline . " 300,70";
+        $lastPointParts = explode(',', end($polyPoints));
+        $lastSparkX = $lastPointParts[0] ?? '300';
+        $lastSparkY = $lastPointParts[1] ?? '12';
+
         View::render('dashboard/index', [
             'title'             => 'Dashboard',
             'subtitle'          => 'Ringkasan omset, antrean produksi, dan cucian selesai',
@@ -60,7 +105,15 @@ class DashboardController {
             'totalOrdersCount'  => $totalOrdersCount,
             'expToday'          => $expToday,
             'unpaidCount'       => $unpaidCount,
-            'unpaidTotal'       => $unpaidTotal
+            'unpaidTotal'       => $unpaidTotal,
+            'netProfit'         => $netProfit,
+            'cashEfficiency'    => $cashEfficiency,
+            'completedRatio'    => $completedRatio,
+            'cashPercent'       => $cashPercent,
+            'sparkPolyline'     => $sparkPolyline,
+            'sparkPolygon'      => $sparkPolygon,
+            'lastSparkX'        => $lastSparkX,
+            'lastSparkY'        => $lastSparkY
         ]);
     }
 }
