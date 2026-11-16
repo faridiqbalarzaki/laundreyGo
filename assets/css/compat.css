@@ -1,0 +1,36 @@
+/* Kompatibilitas <button> -> <a> pada navigasi berbasis URL.
+   TIDAK mengubah tampilan: hanya menetralkan gaya bawaan tautan browser. */
+a.nav-item,
+a.sidebar-user {
+  text-decoration: none;
+  color: inherit;
+}
+a.nav-item { color: var(--teks); }
+a.nav-item.active { color: var(--utama); }
+body.dark a.nav-item.active { color: var(--aksen); }
+form.inline-form { margin: 0; display: inline-flex; }
+a.btn { text-decoration: none; }
+.board-switcher a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  color: var(--teks-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.board-switcher a.active {
+  background: var(--utama);
+  color: #fff;
+}
+body.dark .board-switcher a.active {
+  background: var(--aksen);
+  color: var(--utama);
+}
+

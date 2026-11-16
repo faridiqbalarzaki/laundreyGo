@@ -1,0 +1,266 @@
+/* ==========================================================================
+   LaundryGo Toast Notification System
+   Aqua Design System - Spring Motion & Glassmorphism Aesthetic
+   ========================================================================== */
+
+/* Container: Floating Island di Top-Center (Bebas tabrakan dengan Sidebar & Bell Icon) */
+.flash-toast-container {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+    width: 100%;
+    max-width: 500px;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+/* Individual Toast Item */
+.flash-toast-item {
+    position: relative;
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    width: 100%;
+    padding: 13px 16px 15px 16px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 16px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 
+        0 14px 34px -4px rgba(15, 23, 42, 0.12),
+        0 4px 14px -2px rgba(15, 23, 42, 0.05),
+        0 0 0 1px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+    animation: toastSpringIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+    box-sizing: border-box;
+}
+
+.flash-toast-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 18px 38px -4px rgba(15, 23, 42, 0.15),
+        0 6px 18px -2px rgba(15, 23, 42, 0.07),
+        0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+/* Exit Motion (Smooth Fade + Slide Up) */
+.flash-toast-item.is-leaving {
+    animation: toastSpringOut 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+/* Semantic Variant Borders */
+.flash-toast-success { border-left: 4px solid #10B981; }
+.flash-toast-error   { border-left: 4px solid #EF4444; }
+.flash-toast-warning { border-left: 4px solid #F59E0B; }
+.flash-toast-info    { border-left: 4px solid #0284C7; }
+
+/* Squircle Icon Container */
+.flash-toast-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.flash-toast-success .flash-toast-icon {
+    background: #ECFDF5;
+    color: #059669;
+    border: 1px solid #A7F3D0;
+}
+
+.flash-toast-error .flash-toast-icon {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FECACA;
+}
+
+.flash-toast-warning .flash-toast-icon {
+    background: #FFFBEB;
+    color: #D97706;
+    border: 1px solid #FDE68A;
+}
+
+.flash-toast-info .flash-toast-icon {
+    background: #F0F9FF;
+    color: #0284C7;
+    border: 1px solid #BAE6FD;
+}
+
+/* Toast Body */
+.flash-toast-body {
+    flex: 1;
+    min-width: 0;
+    padding-right: 22px;
+}
+
+.flash-toast-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.flash-toast-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.flash-toast-success .flash-toast-title { color: #059669; }
+.flash-toast-error .flash-toast-title   { color: #DC2626; }
+.flash-toast-warning .flash-toast-title { color: #D97706; }
+.flash-toast-info .flash-toast-title    { color: #0284C7; }
+
+.flash-toast-timestamp {
+    font-size: 0.72rem;
+    color: #94A3B8;
+    font-weight: 500;
+    user-select: none;
+}
+
+.flash-toast-message {
+    font-size: 0.875rem;
+    color: #334155;
+    line-height: 1.45;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+/* Close Button (X) */
+.flash-toast-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: #94A3B8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.flash-toast-close:hover {
+    background: #F1F5F9;
+    color: #0F172A;
+    transform: scale(1.08);
+}
+
+.flash-toast-close:active {
+    transform: scale(0.95);
+}
+
+/* Animated Progress Bar (Menghitung Mundur Menghilang Sendiri) */
+.flash-toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.flash-toast-progress-bar {
+    height: 100%;
+    width: 100%;
+    transform-origin: left;
+    animation: toastCountdown linear forwards;
+}
+
+.flash-toast-success .flash-toast-progress-bar { background: #10B981; }
+.flash-toast-error .flash-toast-progress-bar   { background: #EF4444; }
+.flash-toast-warning .flash-toast-progress-bar { background: #F59E0B; }
+.flash-toast-info .flash-toast-progress-bar    { background: #0284C7; }
+
+/* Pause Countdown saat Kursor Mengarah ke Notifikasi */
+.flash-toast-item:hover .flash-toast-progress-bar,
+.flash-toast-item.is-paused .flash-toast-progress-bar {
+    animation-play-state: paused;
+}
+
+/* Keyframe Animations */
+@keyframes toastSpringIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-22px) scale(0.95);
+    }
+    65% {
+        transform: translateY(3px) scale(1.008);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes toastSpringOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 120px;
+        margin-bottom: 0;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.92);
+        max-height: 0;
+        margin-bottom: -12px;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+    }
+}
+
+@keyframes toastCountdown {
+    0% {
+        width: 100%;
+    }
+    100% {
+        width: 0%;
+    }
+}
+
+/* Responsive Support */
+@media (max-width: 640px) {
+    .flash-toast-container {
+        top: 12px;
+        max-width: 100%;
+        padding: 0 12px;
+    }
+    .flash-toast-item {
+        padding: 12px 14px 14px 14px;
+        border-radius: 14px;
+        gap: 10px;
+    }
+    .flash-toast-icon {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 10px;
+    }
+    .flash-toast-message {
+        font-size: 0.82rem;
+    }
+}

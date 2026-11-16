@@ -1,0 +1,66 @@
+<?php
+namespace App\Controllers;
+
+use App\Core\Auth;
+use App\Core\Helper;
+use App\Core\View;
+use App\Core\Database;
+use App\Models\Pesanan;
+use App\Models\Pengeluaran;
+
+class DashboardController {
+    public function index(): void {
+        Auth::requireLogin();
+
+        // Petugas diarahkan ke lantai produksi
+        if (Auth::isPetugas()) {
+            Helper::redirect(Helper::url('produksi'));
+        }
+
+        $metrics = Pesanan::getMetrics();
+        $chartData = Pesanan::getChart14Days();
+        $recentOrders = Pesanan::all(null, null);
+        $recentOrders = array_slice($recentOrders, 0, 4);
+
+        // Stage counts
+        $sqlStages = "SELECT status_cucian, COUNT(*) AS total FROM pesanan WHERE status_cucian IN ('Antrean', 'Dicuci', 'Disetrika') GROUP BY status_cucian";
+        $resStages = Database::query($sqlStages);
+        $stageCounts = ['Antrean' => 0, 'Dicuci' => 0, 'Disetrika' => 0];
+        foreach ($resStages as $st) {
+            $stageCounts[$st['status_cucian']] = (int)$st['total'];
+        }
+
+        // Ready racks
+        $sqlRacks = "SELECT DISTINCT lokasi_rak FROM pesanan WHERE status_cucian = 'Siap Diambil' AND lokasi_rak IS NOT NULL AND lokasi_rak != '' ORDER BY lokasi_rak ASC LIMIT 4";
+        $racks = Database::query($sqlRacks);
+        $readyRacks = array_column($racks, 'lokasi_rak');
+
+        // Total orders count
+        $sqlTotalOrders = "SELECT COUNT(*) as total FROM pesanan";
+        $totalOrdersCount = (int)(Database::fetch($sqlTotalOrders)['total'] ?? 0);
+
+        // Expense today
+        $sqlExpToday = "SELECT COALESCE(SUM(jumlah), 0) AS total FROM pengeluaran WHERE tanggal_pengeluaran = CURRENT_DATE";
+        $expToday = (float)(Database::fetch($sqlExpToday)['total'] ?? 0);
+
+        // Unpaid counts
+        $sqlUnpaid = "SELECT COUNT(*) as total_count, COALESCE(SUM(total_harga), 0) as total_nominal FROM pesanan WHERE status_pembayaran = 'Belum Lunas' AND status_cucian != 'Dibatalkan'";
+        $unpaidInfo = Database::fetch($sqlUnpaid);
+        $unpaidCount = (int)($unpaidInfo['total_count'] ?? 0);
+        $unpaidTotal = (float)($unpaidInfo['total_nominal'] ?? 0);
+
+        View::render('dashboard/index', [
+            'title'             => 'Dashboard',
+            'subtitle'          => 'Ringkasan omset, antrean produksi, dan cucian selesai',
+            'metrics'           => $metrics,
+            'chartData'         => $chartData,
+            'recentOrders'      => $recentOrders,
+            'stageCounts'       => $stageCounts,
+            'readyRacks'        => $readyRacks,
+            'totalOrdersCount'  => $totalOrdersCount,
+            'expToday'          => $expToday,
+            'unpaidCount'       => $unpaidCount,
+            'unpaidTotal'       => $unpaidTotal
+        ]);
+    }
+}
