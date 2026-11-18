@@ -35,12 +35,12 @@ ON DUPLICATE KEY UPDATE `nama_kategori` = VALUES(`nama_kategori`);
 
 -- 4. LAYANAN
 INSERT INTO `layanan` (`id_layanan`, `nama_layanan`, `harga`, `estimasi_waktu`, `satuan`, `status_aktif`, `id_kategori`) VALUES
-('LAY-01', 'Cuci Kering + Setrika', 7000, 48, 'kg', 1, 'KAT-01'),
+('LAY-01', 'Cuci Kering + Setrika', 6500, 24, 'kg', 1, 'KAT-01'),
 ('LAY-02', 'Cuci Kering Saja', 5000, 24, 'kg', 1, 'KAT-01'),
-('LAY-03', 'Setrika Saja', 4000, 24, 'kg', 1, 'KAT-01'),
-('LAY-04', 'Bed Cover Besar', 25000, 48, 'pcs', 1, 'KAT-02'),
-('LAY-05', 'Cuci Sepatu Premium', 30000, 72, 'pcs', 1, 'KAT-02'),
-('LAY-06', 'Kilat Express 6 Jam', 12000, 6, 'kg', 1, 'KAT-03')
+('LAY-03', 'Setrika Saja', 4500, 24, 'kg', 1, 'KAT-01'),
+('LAY-04', 'Bed Cover', 25000, 24, 'pcs', 1, 'KAT-02'),
+('LAY-06', 'Kilat', 10000, 6, 'kg', 1, 'KAT-03'),
+('LAY-07', 'Selimut', 15000, 24, 'pcs', 1, 'KAT-02')
 ON DUPLICATE KEY UPDATE `harga` = VALUES(`harga`), `nama_layanan` = VALUES(`nama_layanan`);
 
 -- 5. METODE PEMBAYARAN
@@ -68,11 +68,11 @@ INSERT INTO `pelanggan` (`id_pelanggan`, `nama_pelanggan`, `no_telepon`, `alamat
 ON DUPLICATE KEY UPDATE `nama_pelanggan` = VALUES(`nama_pelanggan`), `no_telepon` = VALUES(`no_telepon`);
 
 -- 8. PESANAN SAMPLE
-INSERT INTO `pesanan` (`id_pesanan`, `tanggal_masuk`, `tanggal_keluar`, `status_cucian`, `total_harga`, `status_pembayaran`, `lokasi_rak`, `catatan_khusus`, `parfum`, `is_kilat`, `id_pelanggan`, `id_anggota`) VALUES
-('LG-261114-001', DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY), 'Siap Diambil', 28000, 'Lunas', 'A1', 'Pisahkan baju putih', 'Ocean Fresh', 0, 'PEL-001', 'USR-002'),
-('LG-261114-002', DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 1 DAY), 'Dicuci', 35000, 'Belum Lunas', NULL, 'Gunakan pewangi extra', 'Floral Romantic', 0, 'PEL-002', 'USR-002'),
-('LG-261115-001', DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_ADD(NOW(), INTERVAL 1 HOUR), 'Disetrika', 36000, 'Lunas', NULL, 'Baju kerja disetrika rapi dan licin', 'Sweet Berry', 1, 'PEL-003', 'USR-002'),
-('LG-261115-002', DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 23 HOUR), 'Antrean', 21000, 'Belum Lunas', NULL, 'Celana levis jangan disikat kasar', 'Ocean Fresh', 0, 'PEL-004', 'USR-002')
+INSERT INTO `pesanan` (`id_pesanan`, `tanggal_masuk`, `tanggal_keluar`, `status_cucian`, `total_harga`, `status_pembayaran`, `lokasi_rak`, `catatan_khusus`, `is_kilat`, `id_pelanggan`, `id_anggota`) VALUES
+('LG-261114-001', DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY), 'Siap Diambil', 28000, 'Lunas', 'A1', 'Pisahkan baju putih', 0, 'PEL-001', 'USR-002'),
+('LG-261114-002', DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 1 DAY), 'Dicuci', 35000, 'Belum Lunas', NULL, 'Gunakan pewangi extra', 0, 'PEL-002', 'USR-002'),
+('LG-261115-001', DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_ADD(NOW(), INTERVAL 1 HOUR), 'Disetrika', 36000, 'Lunas', NULL, 'Baju kerja disetrika rapi dan licin', 1, 'PEL-003', 'USR-002'),
+('LG-261115-002', DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 23 HOUR), 'Antrean', 21000, 'Belum Lunas', NULL, 'Celana levis jangan disikat kasar', 0, 'PEL-004', 'USR-002')
 ON DUPLICATE KEY UPDATE `status_cucian` = VALUES(`status_cucian`);
 
 -- 9. DETAIL PESANAN SAMPLE

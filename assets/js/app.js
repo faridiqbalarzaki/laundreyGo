@@ -5,9 +5,48 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
+    initMobileDrawer();
     initClock();
     initGlobalShortcuts();
 });
+
+// 1b. MOBILE OFF-CANVAS DRAWER
+function initMobileDrawer() {
+    const btn = document.getElementById('mobileMenuBtn');
+    const panel = document.getElementById('mobileDrawerPanel');
+    const backdrop = document.getElementById('mobileDrawerBackdrop');
+    const closeBtn = document.getElementById('mobileDrawerClose');
+
+    if (!btn || !panel || !backdrop) return;
+
+    function openDrawer() {
+        panel.classList.add('is-open');
+        backdrop.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDrawer() {
+        panel.classList.remove('is-open');
+        backdrop.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+    }
+
+    btn.addEventListener('click', openDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+
+    panel.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', closeDrawer);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panel.classList.contains('is-open')) {
+            closeDrawer();
+        }
+    });
+}
 
 // 1. SIDEBAR TOGGLE
 function initSidebar() {
@@ -236,7 +275,10 @@ function renderDrawerData(order) {
     document.getElementById('drawerTotalHarga').innerText = order.total_harga_formatted || formatRupiah(order.total_harga);
 
     // Notes
-    document.getElementById('drawerParfum').innerText = '🌸 ' + (order.parfum || 'Ocean Fresh');
+    const drawerParfumEl = document.getElementById('drawerParfum');
+    if (drawerParfumEl) {
+        drawerParfumEl.innerText = '-';
+    }
     document.getElementById('drawerKilat').innerText = order.is_kilat ? '⚡ Layanan Kilat' : 'Reguler';
     document.getElementById('drawerCatatan').innerText = order.catatan_khusus || 'Tidak ada catatan khusus';
 
@@ -363,7 +405,6 @@ async function loadOrderToThermalPrint(orderId, type = 'receipt') {
                     Tgl Masuk: ${order.tanggal_masuk_formatted || order.tanggal_masuk}<br>
                     Selesai  : ${order.tanggal_keluar_formatted || order.tanggal_keluar}<br>
                     Pelanggan: <strong>${escapeHtml(order.nama_pelanggan)}</strong> (${order.no_telepon})<br>
-                    Parfum   : ${escapeHtml(order.parfum || 'Ocean Fresh')}<br>
                     ${order.is_kilat ? '*** PRIORITAS KILAT ***<br>' : ''}
                 </div>
                 --------------------------------<br>
@@ -403,10 +444,7 @@ async function loadOrderToThermalPrint(orderId, type = 'receipt') {
                 <div style="font-size:16px;font-weight:bold;margin:4px 0;">${order.id_pesanan}</div>
                 <div style="font-size:12px;font-weight:bold;">${escapeHtml(order.nama_pelanggan)}</div>
                 <div style="font-size:10px;margin-top:2px;">
-                    ${order.is_kilat ? '⚡ [KILAT EXPRESS] • ' : ''}Rak: <strong>${order.lokasi_rak || 'A1'}</strong>
-                </div>
-                <div style="font-size:9px;margin-top:2px;">
-                    Parfum: ${escapeHtml(order.parfum || 'Ocean Fresh')}
+                    ${order.is_kilat ? '⚡ [KILAT EXPRESS] • ' : ''}Rak: <strong>${order.lokasi_rak || '-'}</strong>
                 </div>
                 <div style="font-size:9px;color:#555;margin-top:2px;">
                     SLA: ${order.tanggal_keluar_formatted || order.tanggal_keluar}
@@ -440,7 +478,7 @@ function formatDateTime(str) {
 }
 
 // 5. GLOBAL TOAST NOTIFICATION API (createui Showcase Style)
-window.showToast = function(message, type = 'success', title = null, duration = 4200) {
+window.showToast = function(message, type = 'success', title = null, duration = 4200, action = null) {
     let container = document.getElementById('flashToastContainer');
     if (!container) {
         container = document.createElement('div');
@@ -489,12 +527,25 @@ window.showToast = function(message, type = 'success', title = null, duration = 
                 </div>
                 <div class="flash-toast-message">${escapeHtml(message)}</div>
             </div>
+            ${action && action.text ? `<button type="button" class="flash-toast-action-btn">${escapeHtml(action.text)}</button>` : ''}
             <button type="button" class="flash-toast-close" title="Tutup Notifikasi" aria-label="Tutup Notifikasi">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
         <div class="flash-toast-progress"></div>
     `;
+
+    if (action && typeof action.onClick === 'function') {
+        const actBtn = toast.querySelector('.flash-toast-action-btn');
+        if (actBtn) {
+            actBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                action.onClick();
+                toast.classList.add('is-leaving');
+                setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 180);
+            });
+        }
+    }
 
     container.appendChild(toast);
     if (window.__attachToastBehavior) {
@@ -554,6 +605,73 @@ window.AquaModal = (function() {
         backdrop.setAttribute('aria-modal', 'true');
         backdrop.setAttribute('aria-labelledby', 'aquaModalTitle');
 
+        const hasPayment = Boolean(options.hasPayment);
+        let selectedPaymentMethod = options.defaultPayment || 'MET-01';
+        const totalAmount = Number(options.totalAmount || 0);
+        let cashReceived = totalAmount > 0 ? totalAmount : 0;
+
+        function formatRupiahDots(n) {
+            return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        function getCashPresets(total) {
+            const presets = [
+                { label: 'Uang Pas', amount: total }
+            ];
+            const p2 = total < 50000 ? 50000 : (total < 100000 ? 100000 : Math.ceil(total / 50000) * 50000);
+            const p3 = total < 100000 ? 100000 : (p2 + 50000);
+            if (p2 > total) presets.push({ label: `Rp ${formatRupiahDots(p2)}`, amount: p2 });
+            if (p3 > p2) presets.push({ label: `Rp ${formatRupiahDots(p3)}`, amount: p3 });
+            while (presets.length < 3) {
+                const last = presets[presets.length - 1].amount;
+                presets.push({ label: `Rp ${formatRupiahDots(last + 50000)}`, amount: last + 50000 });
+            }
+            return presets.slice(0, 3);
+        }
+
+        const presets = getCashPresets(totalAmount);
+
+        const paymentSectionHtml = hasPayment ? `
+            <div class="aqua-modal-payment-section">
+                <span class="aqua-modal-payment-label">Pilih Metode Pembayaran:</span>
+                <div class="aqua-modal-payment-grid" role="radiogroup" aria-label="Metode Pembayaran">
+                    <button type="button" class="aqua-modal-pay-chip is-active" data-metode="MET-01">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                        <span>Tunai</span>
+                    </button>
+                    <button type="button" class="aqua-modal-pay-chip" data-metode="MET-02">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+                        <span>Transfer</span>
+                    </button>
+                    <button type="button" class="aqua-modal-pay-chip" data-metode="MET-03">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+                        <span>E-Wallet</span>
+                    </button>
+                </div>
+
+                <!-- Cash input section (hanya aktif untuk Tunai) -->
+                <div class="aqua-modal-cash-section" id="aquaModalCashSection">
+                    <div class="aqua-modal-cash-presets">
+                        ${presets.map((p, idx) => `
+                            <button type="button" class="aqua-modal-preset-chip ${idx === 0 ? 'is-active' : ''}" data-amount="${p.amount}">
+                                ${p.label}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div class="aqua-modal-cash-input-wrap">
+                        <span class="aqua-modal-cash-prefix font-mono">Rp</span>
+                        <input type="text" inputmode="numeric" class="aqua-modal-cash-input font-mono" id="aquaModalCashInput" placeholder="0" value="${formatRupiahDots(cashReceived)}" autocomplete="off" spellcheck="false">
+                    </div>
+
+                    <div class="aqua-modal-kembalian-strip" id="aquaModalKembalianStrip">
+                        <span id="aquaModalKembalianLabel">Kembalian</span>
+                        <span class="num-tabular font-mono" id="aquaModalKembalianVal">Rp 0</span>
+                    </div>
+                </div>
+            </div>
+        ` : '';
+
         backdrop.innerHTML = `
             <div class="aqua-modal-card" onclick="event.stopPropagation()">
                 <div class="aqua-modal-icon-wrap">
@@ -562,6 +680,7 @@ window.AquaModal = (function() {
                 <h3 id="aquaModalTitle" class="aqua-modal-title">${escapeHtml(title)}</h3>
                 ${badge ? `<div class="aqua-modal-badge">${badge}</div>` : ''}
                 <div class="aqua-modal-desc">${message}</div>
+                ${paymentSectionHtml}
                 <div class="aqua-modal-actions">
                     <button type="button" class="aqua-modal-btn aqua-modal-btn-cancel">${escapeHtml(cancelText)}</button>
                     <button type="button" class="aqua-modal-btn aqua-modal-btn-confirm btn-${type}">${escapeHtml(confirmText)}</button>
@@ -577,6 +696,80 @@ window.AquaModal = (function() {
         const cancelBtn = backdrop.querySelector('.aqua-modal-btn-cancel');
         const confirmBtn = backdrop.querySelector('.aqua-modal-btn-confirm');
 
+        if (hasPayment) {
+            const payChips = backdrop.querySelectorAll('.aqua-modal-pay-chip');
+            const cashSection = backdrop.querySelector('#aquaModalCashSection');
+            const cashInput = backdrop.querySelector('#aquaModalCashInput');
+            const kembalianStrip = backdrop.querySelector('#aquaModalKembalianStrip');
+            const kembalianLabel = backdrop.querySelector('#aquaModalKembalianLabel');
+            const kembalianVal = backdrop.querySelector('#aquaModalKembalianVal');
+            const presetChips = backdrop.querySelectorAll('.aqua-modal-preset-chip');
+
+            function updateCashCalculation(amount) {
+                cashReceived = amount;
+                const kembalian = cashReceived - totalAmount;
+                if (kembalian >= 0) {
+                    if (kembalianStrip) kembalianStrip.classList.remove('is-underpaid');
+                    if (kembalianLabel) kembalianLabel.textContent = 'Kembalian';
+                    if (kembalianVal) kembalianVal.textContent = 'Rp ' + formatRupiahDots(kembalian);
+                    confirmBtn.disabled = false;
+                    confirmBtn.style.opacity = '1';
+                } else {
+                    if (kembalianStrip) kembalianStrip.classList.add('is-underpaid');
+                    if (kembalianLabel) kembalianLabel.textContent = 'Uang Masih Kurang';
+                    if (kembalianVal) kembalianVal.textContent = '-Rp ' + formatRupiahDots(Math.abs(kembalian));
+                    confirmBtn.disabled = true;
+                    confirmBtn.style.opacity = '0.5';
+                }
+
+                // Sync preset active state
+                presetChips.forEach(p => {
+                    const pAmount = Number(p.dataset.amount);
+                    if (pAmount === cashReceived) {
+                        p.classList.add('is-active');
+                    } else {
+                        p.classList.remove('is-active');
+                    }
+                });
+            }
+
+            payChips.forEach(chip => {
+                chip.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    payChips.forEach(c => c.classList.remove('is-active'));
+                    chip.classList.add('is-active');
+                    selectedPaymentMethod = chip.dataset.metode || 'MET-01';
+
+                    if (selectedPaymentMethod === 'MET-01') {
+                        if (cashSection) cashSection.style.display = 'block';
+                        updateCashCalculation(cashReceived);
+                    } else {
+                        if (cashSection) cashSection.style.display = 'none';
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                    }
+                });
+            });
+
+            presetChips.forEach(preset => {
+                preset.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const val = Number(preset.dataset.amount);
+                    if (cashInput) cashInput.value = formatRupiahDots(val);
+                    updateCashCalculation(val);
+                });
+            });
+
+            if (cashInput) {
+                cashInput.addEventListener('input', function() {
+                    const rawNumbers = this.value.replace(/[^0-9]/g, '');
+                    const numVal = Number(rawNumbers) || 0;
+                    this.value = numVal > 0 ? formatRupiahDots(numVal) : '';
+                    updateCashCalculation(numVal);
+                });
+            }
+        }
+
         cancelBtn.addEventListener('click', () => {
             close();
             onCancel();
@@ -585,7 +778,8 @@ window.AquaModal = (function() {
         confirmBtn.addEventListener('click', () => {
             confirmBtn.style.opacity = '0.85';
             confirmBtn.disabled = true;
-            onConfirm();
+            const finalAmount = (selectedPaymentMethod === 'MET-01') ? cashReceived : totalAmount;
+            onConfirm(selectedPaymentMethod, finalAmount);
             close();
         });
 
@@ -621,6 +815,8 @@ document.addEventListener('submit', function(e) {
     const confirmText = form.dataset.confirmBtn || 'Ya, Lanjutkan';
     const cancelText = form.dataset.cancelBtn || 'Batal';
     const type = form.dataset.confirmType || 'primary';
+    const hasPayment = form.dataset.confirmPayment === 'true';
+    const totalAmount = parseFloat(form.dataset.confirmTotal || '0');
 
     AquaModal.confirm({
         title: title,
@@ -629,7 +825,28 @@ document.addEventListener('submit', function(e) {
         confirmText: confirmText,
         cancelText: cancelText,
         type: type,
-        onConfirm: function() {
+        hasPayment: hasPayment,
+        totalAmount: totalAmount,
+        onConfirm: function(chosenMethod, chosenAmount) {
+            if (hasPayment && chosenMethod) {
+                let inputMetode = form.querySelector('input[name="id_metode"]');
+                if (!inputMetode) {
+                    inputMetode = document.createElement('input');
+                    inputMetode.type = 'hidden';
+                    inputMetode.name = 'id_metode';
+                    form.appendChild(inputMetode);
+                }
+                inputMetode.value = chosenMethod;
+
+                let inputBayar = form.querySelector('input[name="jumlah_bayar"]');
+                if (!inputBayar) {
+                    inputBayar = document.createElement('input');
+                    inputBayar.type = 'hidden';
+                    inputBayar.name = 'jumlah_bayar';
+                    form.appendChild(inputBayar);
+                }
+                inputBayar.value = chosenAmount || totalAmount;
+            }
             form._aquaConfirmed = true;
             form.submit();
         }

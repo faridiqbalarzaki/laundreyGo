@@ -15,30 +15,19 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.orders-table-card .orders-table-scroll {
-    overflow-x: hidden !important;
-    width: 100%;
-}
-
 .orders-table-card .modern-table {
     width: 100%;
     table-layout: auto;
-    font-size: 0.74rem;
     border-collapse: collapse;
 }
 
 .orders-table-card .modern-table th {
-    padding: 8px 6px;
-    font-size: 0.67rem;
-    font-weight: 700;
     color: #64748B;
     background: #F8FAFC;
-    white-space: nowrap;
     border-bottom: 1px solid #E2E8F0;
 }
 
 .orders-table-card .modern-table td {
-    padding: 6px 6px;
     vertical-align: middle;
     border-bottom: 1px solid #F1F5F9;
 }
@@ -206,4 +195,52 @@
     justify-content: center;
     font-size: 11.5px;
     color: #94A3B8;
+}
+
+/* Admin mobile reflow: Pengeluaran & Laporan */
+.expense-main-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 20px;
+    align-items: start;
+}
+
+.expense-bento-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.laporan-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.laporan-pair-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.laporan-toolbar-shell {
+    flex-wrap: wrap;
+}
+
+.laporan-toolbar-actions {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 1120px) {
+    .expense-main-split,
+    .laporan-stat-grid,
+    .laporan-pair-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .expense-bento-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }

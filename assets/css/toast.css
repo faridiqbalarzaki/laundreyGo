@@ -29,6 +29,30 @@ body.is-pos .flash-toast-container {
     right: 24px;
 }
 
+/* Petugas Mobile Shell Context: Anchored inside Mobile Smartphone Frame */
+.flash-toast-container.petugas-mobile-mode,
+body.is-petugas .flash-toast-container,
+body:has(.mobile-app-shell) .flash-toast-container {
+    top: 16px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 24px);
+    max-width: 416px;
+    align-items: center;
+    z-index: 99999999;
+}
+
+.flash-toast-container.petugas-mobile-mode .flash-toast-item,
+body.is-petugas .flash-toast-item,
+body:has(.mobile-app-shell) .flash-toast-item {
+    width: 100%;
+    max-width: 416px;
+    box-shadow: 
+        0 16px 36px -4px rgba(15, 23, 42, 0.22),
+        0 6px 16px -2px rgba(15, 23, 42, 0.1);
+}
+
 /* Individual Toast Item */
 .flash-toast-item {
     position: relative;
@@ -142,6 +166,37 @@ body.is-pos .flash-toast-container {
     line-height: 1.45;
     font-weight: 500;
     word-break: break-word;
+}
+
+/* Action Button inside Toast (createui Video Feature) */
+.flash-toast-action-btn {
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 9999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+    color: #0F172A;
+    cursor: pointer;
+    white-space: nowrap;
+    align-self: center;
+    margin-right: 8px;
+    transition: all 150ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.flash-toast-action-btn:hover {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+    color: #0284C7;
+}
+
+.flash-toast-action-btn:active {
+    transform: scale(0.95);
 }
 
 /* Close Button (Circle Pill Hover) */
@@ -340,6 +395,178 @@ body.is-pos .flash-toast-container {
     max-width: 320px;
 }
 
+/* Aqua Modal Payment Selection Segment */
+.aqua-modal-payment-section {
+    width: 100%;
+    margin: -8px 0 20px 0;
+    text-align: center;
+}
+
+.aqua-modal-payment-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 9px;
+    display: block;
+    letter-spacing: -0.01em;
+}
+
+.aqua-modal-payment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+}
+
+.aqua-modal-pay-chip {
+    height: 38px;
+    border-radius: 9999px;
+    border: 1.5px solid #E2E8F0;
+    background: #F8FAFC;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.aqua-modal-pay-chip svg {
+    flex-shrink: 0;
+    transition: transform 160ms ease, stroke 160ms ease;
+}
+
+.aqua-modal-pay-chip:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    color: #0F172A;
+}
+
+.aqua-modal-pay-chip:hover svg {
+    transform: scale(1.08);
+}
+
+.aqua-modal-pay-chip.is-active {
+    background: #E0F2FE;
+    border-color: #0284C7;
+    color: #0284C7;
+    font-weight: 700;
+    box-shadow: 0 2px 10px rgba(2, 132, 199, 0.22);
+}
+
+.aqua-modal-pay-chip.is-active svg {
+    stroke: #0284C7;
+    stroke-width: 2.3;
+}
+
+/* Aqua Modal Cash Nominal & Presets */
+.aqua-modal-cash-section {
+    width: 100%;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #E2E8F0;
+    text-align: left;
+}
+
+.aqua-modal-cash-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.aqua-modal-preset-chip {
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+    color: #475569;
+    font-size: 0.73rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 140ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    user-select: none;
+}
+
+.aqua-modal-preset-chip:hover {
+    border-color: #0284C7;
+    background: #F0F9FF;
+    color: #0284C7;
+}
+
+.aqua-modal-preset-chip.is-active {
+    background: #0284C7;
+    border-color: #0284C7;
+    color: #FFFFFF;
+    font-weight: 750;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+.aqua-modal-cash-input-wrap {
+    display: flex;
+    align-items: center;
+    height: 38px;
+    background: #FFFFFF;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 0 10px;
+    margin-bottom: 8px;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.aqua-modal-cash-input-wrap:focus-within {
+    border-color: #0284C7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
+}
+
+.aqua-modal-cash-prefix {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #0284C7;
+    margin-right: 8px;
+    user-select: none;
+}
+
+.aqua-modal-cash-input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0F172A;
+    background: transparent;
+}
+
+.aqua-modal-kembalian-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    color: #065F46;
+    font-size: 0.76rem;
+    font-weight: 700;
+    transition: all 150ms ease;
+}
+
+.aqua-modal-kembalian-strip.is-underpaid {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #991B1B;
+}
+
 /* Dual Pill Action Buttons (Matching Foto 1: [Close] and [Action]) */
 .aqua-modal-actions {
     display: grid;
@@ -486,6 +713,22 @@ body.is-pos .flash-toast-container {
     100% {
         opacity: 0;
         transform: scale(0.95) translateY(-8px);
+    }
+}
+
+@media (max-width: 480px) {
+    .flash-toast-container {
+        top: 12px !important;
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+        align-items: stretch !important;
+    }
+    .flash-toast-item {
+        width: 100% !important;
+        max-width: none !important;
     }
 }
 

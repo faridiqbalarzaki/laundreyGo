@@ -27,11 +27,12 @@
 </head>
 <?php 
 $isPosContext = (\App\Core\Auth::isKasir() || (isset($_GET['page']) && $_GET['page'] === 'pos'));
-$bodyClass = 'theme-aqua' . ($isPosContext ? ' is-pos' : '');
+$isPetugasContext = ((isset($_GET['page']) && $_GET['page'] === 'produksi') || \App\Core\Auth::isPetugas() || (isset($title) && strpos($title, 'Produksi') !== false));
+$bodyClass = 'theme-aqua' . ($isPosContext ? ' is-pos' : '') . ($isPetugasContext ? ' is-petugas' : '');
 ?>
 <body class="<?= $bodyClass ?>">
     <!-- Modern Floating Toast Notification System (Aqua Design System) -->
-    <div id="flashToastContainer" class="flash-toast-container <?= $isPosContext ? 'pos-mode' : '' ?>" aria-live="polite" role="region" aria-label="Notifikasi Sistem">
+    <div id="flashToastContainer" class="flash-toast-container <?= $isPosContext ? 'pos-mode' : '' ?> <?= $isPetugasContext ? 'petugas-mobile-mode' : '' ?>" aria-live="polite" role="region" aria-label="Notifikasi Sistem">
         <?php
         $flashTypes = [
             'success' => [

@@ -1,22 +1,35 @@
 <?php
-// Calculate totals per category dynamically
-$catTotals = [
-    'Deterjen'  => ['total' => 0, 'count' => 0, 'id' => 'KP-02', 'icon' => 'droplet'],
-    'Plastik'   => ['total' => 0, 'count' => 0, 'id' => 'KP-03', 'icon' => 'package'],
-    'Listrik'   => ['total' => 0, 'count' => 0, 'id' => 'KP-01', 'icon' => 'zap'],
-    'Lain-lain' => ['total' => 0, 'count' => 0, 'id' => 'KP-04', 'icon' => 'sparkles']
-];
+$catIcon = function (int $size, ?string $name): string {
+    $name = $name ?? '';
+    if (stripos($name, 'listrik') !== false) {
+        $paths = '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>';
+    } elseif (stripos($name, 'bahan') !== false || stripos($name, 'sabun') !== false || stripos($name, 'deterjen') !== false) {
+        $paths = '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>';
+    } elseif (stripos($name, 'gaji') !== false || stripos($name, 'upah') !== false) {
+        $paths = '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>';
+    } elseif (stripos($name, 'pelihara') !== false || stripos($name, 'pemelihara') !== false || stripos($name, 'perawatan') !== false || stripos($name, 'servis') !== false || stripos($name, 'service') !== false || stripos($name, 'perbaikan') !== false) {
+        $paths = '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>';
+    } else {
+        $paths = '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>';
+    }
+    return '<svg width="' . $size . '" height="' . $size . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $paths . '</svg>';
+};
+
+$catTotals = [];
+foreach ($kategoriList as $k) {
+    $catTotals[$k['id_kategori_pengeluaran']] = ['total' => 0.0, 'count' => 0];
+}
 
 $overallTotal = 0;
 $overallCount = 0;
 
 foreach ($pengeluaran as $exp) {
-    $cName = $exp['nama_kategori'] ?? 'Lain-lain';
-    if (!isset($catTotals[$cName])) {
-        $catTotals[$cName] = ['total' => 0, 'count' => 0, 'id' => $exp['id_kategori_pengeluaran'] ?? 'KP-04', 'icon' => 'sparkles'];
+    $cid = $exp['id_kategori_pengeluaran'];
+    if (!isset($catTotals[$cid])) {
+        $catTotals[$cid] = ['total' => 0.0, 'count' => 0];
     }
-    $catTotals[$cName]['total'] += (float)$exp['jumlah'];
-    $catTotals[$cName]['count']++;
+    $catTotals[$cid]['total'] += (float)$exp['jumlah'];
+    $catTotals[$cid]['count']++;
     $overallTotal += (float)$exp['jumlah'];
     $overallCount++;
 }
@@ -35,7 +48,7 @@ if ($activeKategori !== 'Semua') {
 
 <div class="page-sheet-container" style="display: flex; flex-direction: column; gap: 18px; max-width: 1400px; margin: 0 auto; width: 100%;">
     <!-- 2-Column Split: Kiri (Kategori Filter & Riwayat) & Kanan (Ringkasan Pengeluaran) -->
-    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start;">
+    <div class="expense-main-split">
         
         <!-- ========================================================================
              KOLOM KIRI: FILTER KATEGORI & RIWAYAT PENGELUARAN
@@ -49,7 +62,7 @@ if ($activeKategori !== 'Semua') {
                     <div style="font-size: 0.77rem; color: #64748b; margin-top: 3px;">Pilih kategori untuk memfokuskan riwayat pengeluaran operasional</div>
                 </div>
 
-                <div class="expense-bento-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                <div class="expense-bento-grid">
                     <!-- Kartu: Semua Kategori -->
                     <?php $isAllActive = ($activeKategori === 'Semua'); ?>
                     <a href="<?= \App\Core\Helper::url('pengeluaran', ['kategori' => 'Semua']) ?>"
@@ -62,73 +75,23 @@ if ($activeKategori !== 'Semua') {
                         <span style="font-size: 0.73rem; color: #64748b;" class="num-tabular"><?= $overallCount ?> item &bull; <?= \App\Core\Helper::rupiah($overallTotal) ?></span>
                     </a>
 
-                    <!-- Kartu: Deterjen -->
-                    <?php 
-                    $detId = 'KP-02';
-                    $isDetActive = ($activeKategori === $detId);
-                    $detTotal = $catTotals['Deterjen']['total'] ?? 0;
-                    $detCount = $catTotals['Deterjen']['count'] ?? 0;
+                    <!-- Kartu: Kategori dari database -->
+                    <?php foreach ($kategoriList as $k):
+                        $kid = $k['id_kategori_pengeluaran'];
+                        $isKatActive = ($activeKategori === $kid);
+                        $katTotal = $catTotals[$kid]['total'] ?? 0;
+                        $katCount = $catTotals[$kid]['count'] ?? 0;
                     ?>
-                    <a href="<?= \App\Core\Helper::url('pengeluaran', ['kategori' => $detId]) ?>"
-                       class="expense-cat-card <?= $isDetActive ? 'is-active' : '' ?>"
-                       style="text-decoration: none; padding: 13px 15px; border-radius: 14px; border: <?= $isDetActive ? '1.5px solid #0284c7' : '1px solid #e2e8f0' ?>; background: <?= $isDetActive ? '#f0f9ff' : '#ffffff' ?>; display: flex; flex-direction: column; gap: 6px; transition: all 0.15s ease;">
-                        <div style="color: <?= $isDetActive ? '#0284c7' : '#475569' ?>; display: flex; align-items: center;">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    <a href="<?= \App\Core\Helper::url('pengeluaran', ['kategori' => $kid]) ?>"
+                       class="expense-cat-card <?= $isKatActive ? 'is-active' : '' ?>"
+                       style="text-decoration: none; padding: 13px 15px; border-radius: 14px; border: <?= $isKatActive ? '1.5px solid #0284c7' : '1px solid #e2e8f0' ?>; background: <?= $isKatActive ? '#f0f9ff' : '#ffffff' ?>; display: flex; flex-direction: column; gap: 6px; transition: all 0.15s ease;">
+                        <div style="color: <?= $isKatActive ? '#0284c7' : '#475569' ?>; display: flex; align-items: center;">
+                            <?= $catIcon(17, $k['nama_kategori']) ?>
                         </div>
-                        <span style="font-size: 0.85rem; font-weight: 700; color: <?= $isDetActive ? '#0284c7' : '#0f172a' ?>;">Deterjen</span>
-                        <span style="font-size: 0.73rem; color: #64748b;" class="num-tabular"><?= $detCount ?> item &bull; <?= \App\Core\Helper::rupiah($detTotal) ?></span>
+                        <span style="font-size: 0.85rem; font-weight: 700; color: <?= $isKatActive ? '#0284c7' : '#0f172a' ?>;"><?= htmlspecialchars($k['nama_kategori']) ?></span>
+                        <span style="font-size: 0.73rem; color: #64748b;" class="num-tabular"><?= $katCount ?> item &bull; <?= \App\Core\Helper::rupiah($katTotal) ?></span>
                     </a>
-
-                    <!-- Kartu: Plastik -->
-                    <?php 
-                    $plaId = 'KP-03';
-                    $isPlaActive = ($activeKategori === $plaId);
-                    $plaTotal = $catTotals['Plastik']['total'] ?? 0;
-                    $plaCount = $catTotals['Plastik']['count'] ?? 0;
-                    ?>
-                    <a href="<?= \App\Core\Helper::url('pengeluaran', ['kategori' => $plaId]) ?>"
-                       class="expense-cat-card <?= $isPlaActive ? 'is-active' : '' ?>"
-                       style="text-decoration: none; padding: 13px 15px; border-radius: 14px; border: <?= $isPlaActive ? '1.5px solid #0284c7' : '1px solid #e2e8f0' ?>; background: <?= $isPlaActive ? '#f0f9ff' : '#ffffff' ?>; display: flex; flex-direction: column; gap: 6px; transition: all 0.15s ease;">
-                        <div style="color: <?= $isPlaActive ? '#0284c7' : '#475569' ?>; display: flex; align-items: center;">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                        </div>
-                        <span style="font-size: 0.85rem; font-weight: 700; color: <?= $isPlaActive ? '#0284c7' : '#0f172a' ?>;">Plastik</span>
-                        <span style="font-size: 0.73rem; color: #64748b;" class="num-tabular"><?= $plaCount ?> item &bull; <?= \App\Core\Helper::rupiah($plaTotal) ?></span>
-                    </a>
-
-                    <!-- Kartu: Listrik -->
-                    <?php 
-                    $lisId = 'KP-01';
-                    $isLisActive = ($activeKategori === $lisId);
-                    $lisTotal = $catTotals['Listrik']['total'] ?? 0;
-                    $lisCount = $catTotals['Listrik']['count'] ?? 0;
-                    ?>
-                    <a href="<?= \App\Core\Helper::url('pengeluaran', ['kategori' => $lisId]) ?>"
-                       class="expense-cat-card <?= $isLisActive ? 'is-active' : '' ?>"
-                       style="text-decoration: none; padding: 13px 15px; border-radius: 14px; border: <?= $isLisActive ? '1.5px solid #0284c7' : '1px solid #e2e8f0' ?>; background: <?= $isLisActive ? '#f0f9ff' : '#ffffff' ?>; display: flex; flex-direction: column; gap: 6px; transition: all 0.15s ease;">
-                        <div style="color: <?= $isLisActive ? '#0284c7' : '#475569' ?>; display: flex; align-items: center;">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                        </div>
-                        <span style="font-size: 0.85rem; font-weight: 700; color: <?= $isLisActive ? '#0284c7' : '#0f172a' ?>;">Listrik</span>
-                        <span style="font-size: 0.73rem; color: #64748b;" class="num-tabular"><?= $lisCount ?> item &bull; <?= \App\Core\Helper::rupiah($lisTotal) ?></span>
-                    </a>
-
-                    <!-- Kartu Baris 2: Lain-lain -->
-                    <?php 
-                    $othId = 'KP-04';
-                    $isOthActive = ($activeKategori === $othId);
-                    $othTotal = $catTotals['Lain-lain']['total'] ?? 0;
-                    $othCount = $catTotals['Lain-lain']['count'] ?? 0;
-                    ?>
-                    <a href="<?= \App\Core\Helper::url('pengeluaran', ['kategori' => $othId]) ?>"
-                       class="expense-cat-card <?= $isOthActive ? 'is-active' : '' ?>"
-                       style="text-decoration: none; padding: 13px 15px; border-radius: 14px; border: <?= $isOthActive ? '1.5px solid #0284c7' : '1px solid #e2e8f0' ?>; background: <?= $isOthActive ? '#f0f9ff' : '#ffffff' ?>; display: flex; flex-direction: column; gap: 6px; transition: all 0.15s ease; grid-column: 1;">
-                        <div style="color: <?= $isOthActive ? '#0284c7' : '#475569' ?>; display: flex; align-items: center;">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M18 15v-2c0-.6-.4-1-1-1H7c-.6 0-1 .4-1 1v2"/><path d="M12 12V9"/></svg>
-                        </div>
-                        <span style="font-size: 0.85rem; font-weight: 700; color: <?= $isOthActive ? '#0284c7' : '#0f172a' ?>;">Lain-lain</span>
-                        <span style="font-size: 0.73rem; color: #64748b;" class="num-tabular"><?= $othCount ?> item &bull; <?= \App\Core\Helper::rupiah($othTotal) ?></span>
-                    </a>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
@@ -174,15 +137,7 @@ if ($activeKategori !== 'Semua') {
                                 <!-- Left: Squircle Icon + Title/Category + Date -->
                                 <div style="display: flex; align-items: center; gap: 14px; min-width: 0;">
                                     <div style="width: 42px; height: 42px; border-radius: 12px; border: 1px solid #bae6fd; background: #f0f9ff; color: #0284c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                        <?php if ($kName === 'Deterjen'): ?>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                                        <?php elseif ($kName === 'Plastik'): ?>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                                        <?php elseif ($kName === 'Listrik'): ?>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                                        <?php else: ?>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M18 15v-2c0-.6-.4-1-1-1H7c-.6 0-1 .4-1 1v2"/><path d="M12 12V9"/></svg>
-                                        <?php endif; ?>
+                                        <?= $catIcon(18, $kName) ?>
                                     </div>
                                     <div style="min-width: 0;">
                                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -247,51 +202,21 @@ if ($activeKategori !== 'Semua') {
                     Ringkasan Pengeluaran
                 </div>
 
-                <!-- Rincian Tiap Kategori Sesuai Foto 3 -->
+                <!-- Rincian Tiap Kategori dari database -->
                 <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 2px;">
-                    <!-- Deterjen -->
+                    <?php foreach ($kategoriList as $k):
+                        $kid = $k['id_kategori_pengeluaran'];
+                    ?>
                     <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem;">
                         <span style="color: #334155; display: inline-flex; align-items: center; gap: 6px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                            Deterjen
+                            <span style="color: #0284c7; display: inline-flex;"><?= $catIcon(14, $k['nama_kategori']) ?></span>
+                            <?= htmlspecialchars($k['nama_kategori']) ?>
                         </span>
                         <span class="num-tabular" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">
-                            <?= \App\Core\Helper::rupiah($catTotals['Deterjen']['total'] ?? 0) ?>
+                            <?= \App\Core\Helper::rupiah($catTotals[$kid]['total'] ?? 0) ?>
                         </span>
                     </div>
-
-                    <!-- Plastik -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem;">
-                        <span style="color: #334155; display: inline-flex; align-items: center; gap: 6px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                            Plastik
-                        </span>
-                        <span class="num-tabular" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">
-                            <?= \App\Core\Helper::rupiah($catTotals['Plastik']['total'] ?? 0) ?>
-                        </span>
-                    </div>
-
-                    <!-- Listrik -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem;">
-                        <span style="color: #334155; display: inline-flex; align-items: center; gap: 6px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                            Listrik
-                        </span>
-                        <span class="num-tabular" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">
-                            <?= \App\Core\Helper::rupiah($catTotals['Listrik']['total'] ?? 0) ?>
-                        </span>
-                    </div>
-
-                    <!-- Lain-lain -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem;">
-                        <span style="color: #334155; display: inline-flex; align-items: center; gap: 6px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><circle cx="12" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M18 15v-2c0-.6-.4-1-1-1H7c-.6 0-1 .4-1 1v2"/><path d="M12 12V9"/></svg>
-                            Lain-lain
-                        </span>
-                        <span class="num-tabular" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">
-                            <?= \App\Core\Helper::rupiah($catTotals['Lain-lain']['total'] ?? 0) ?>
-                        </span>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
 
                 <div style="border-top: 1px solid #f1f5f9; margin: 4px 0;"></div>

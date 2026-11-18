@@ -38,6 +38,7 @@ class View {
         } elseif ($layout === 'app') {
             $isKasir = \App\Core\Auth::isKasir();
             include __DIR__ . '/../Views/layouts/header.php';
+            include __DIR__ . '/../Views/partials/mobile_shell.php';
             echo '<div class="app-shell">';
             include __DIR__ . '/../Views/layouts/sidebar.php';
             echo '<div class="main-viewport">';

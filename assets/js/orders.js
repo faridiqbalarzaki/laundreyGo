@@ -85,13 +85,12 @@
       customerName: o.nama_pelanggan || o.customerName || 'Pelanggan Umum',
       customerPhone: o.no_telepon || o.customerPhone || '-',
       serviceName: o.daftar_layanan || o.nama_layanan || o.serviceName || 'Cuci Kering + Setrika',
-      perfume: o.parfum || o.perfume || 'Ocean Fresh',
       status: (o.status_cucian || o.status || 'Antrean').toLowerCase(),
       isPaid: String(o.status_pembayaran || o.isPaid).toLowerCase() === 'lunas' || o.isPaid === true,
       paymentMethod: o.metode_pembayaran || o.paymentMethod || 'Tunai',
       subtotal: parseFloat(o.total_harga || o.subtotal || 0),
       isKilat: Boolean(o.is_kilat) || (o.daftar_layanan || '').toLowerCase().includes('kilat') || (o.serviceName || '').toLowerCase().includes('kilat'),
-      rackLocation: o.lokasi_rak || o.rackLocation || 'A1',
+      rackLocation: o.lokasi_rak || o.rackLocation || '',
       weight: parseFloat(o.total_berat || o.weight || 1),
       unit: o.satuan || o.unit || 'kg',
       notes: o.catatan ? [o.catatan] : (o.notes || [])
@@ -124,8 +123,6 @@
       { id: 'setrika-saja', label: 'Setrika Saja', color: '#06B6D4' },
       { id: 'kilat', label: 'Kilat Express', color: '#F59E0B' },
       { id: 'satuan', label: 'Cuci Satuan', color: '#8B5CF6' },
-      { id: 'parfum-ocean', label: 'Parfum Ocean Fresh', color: '#10B981' },
-      { id: 'parfum-lavender', label: 'Parfum Lavender Calm', color: '#6366F1' },
       { id: 'lipat', label: 'Jangan Dilipat', color: '#EC4899' },
       { id: 'gantung', label: 'Gantung', color: '#14B8A6' }
     ];
@@ -134,7 +131,6 @@
   // --- 3. FILTERING LOGIC (Identik index.html) ---
   function matchesOrderTag(order, tagId) {
     const sName = (order.serviceName || '').toLowerCase();
-    const perfume = (order.perfume || '').toLowerCase();
     const notesStr = (order.notes || []).join(' ').toLowerCase();
 
     switch (tagId) {
@@ -143,8 +139,6 @@
       case 'setrika-saja': return sName.includes('setrika saja') || (sName.includes('setrika') && !sName.includes('cuci'));
       case 'kilat': return order.isKilat || sName.includes('kilat') || sName.includes('express');
       case 'satuan': return sName.includes('satuan') || order.unit === 'item' || order.unit === 'pcs';
-      case 'parfum-ocean': return perfume.includes('ocean');
-      case 'parfum-lavender': return perfume.includes('lavender');
       case 'lipat': return notesStr.includes('lipat');
       case 'gantung': return notesStr.includes('gantung');
       default: return false;
@@ -487,7 +481,6 @@
       const payMethodVal = order.paymentMethod || order.payMethod || 'Tunai';
       const weightVal = order.weight || 1;
       const unitVal = order.unit || 'kg';
-      const perfumeVal = order.perfume || 'Ocean Fresh';
 
       const rawSt = (order.status || 'antrean').toLowerCase();
       let dispSt = 'Antrean';
@@ -505,7 +498,7 @@
           </td>
           <td>
             <div style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px 5px;">
-              <span class="table-order-code num-tabular" style="font-weight: 700; color: var(--primary); font-size: 0.83rem; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color 0.2s;" onmouseover="this.style.textDecorationColor='currentColor'" onmouseout="this.style.textDecorationColor='transparent'" onclick="if(typeof openOrderDrawer==='function')openOrderDrawer('${escapeHtml(order.code)}')" title="Klik untuk kelola alur & rincian">${escapeHtml(order.code)}</span>
+              <span class="table-order-code num-tabular">${escapeHtml(order.code)}</span>
               ${order.isKilat ? `<span class="table-kilat-chip">Kilat</span>` : ''}
             </div>
           </td>
@@ -521,9 +514,6 @@
           </td>
           <td>
             <strong style="display: block; line-height: 1.28; color: var(--ink); font-size: 0.82rem;">${escapeHtml(srvName)}</strong>
-            <div class="orders-spec-sub">
-              <span>Parfum ${escapeHtml(perfumeVal)}</span>
-            </div>
           </td>
           <td>
             <span class="orders-status-badge" data-status="${escapeHtml(order.status)}">${dispSt}</span>
@@ -689,7 +679,7 @@
                   <span>${escapeHtml(order.serviceName)}</span>
                   <span>${formatRp(order.subtotal)}</span>
                 </div>
-                <div style="color: #64748B; font-size: 10px;">${order.weight} ${escapeHtml(order.unit)} \u2022 ${escapeHtml(order.perfume || 'Ocean Fresh')}</div>
+                <div style="color: #64748B; font-size: 10px;">${order.weight} ${escapeHtml(order.unit)}</div>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; margin-bottom: 4px;">
                 <span>TOTAL:</span>
@@ -747,7 +737,7 @@
               </div>
               <div style="font-size: 0.88rem; font-weight: 800; color: #0F172A;">${escapeHtml(order.customerName)}</div>
               <div style="font-size: 0.75rem; color: #475569; margin-bottom: 4px;">${escapeHtml(order.serviceName)} \u2022 ${order.weight} ${escapeHtml(order.unit)}</div>
-              ${order.perfume ? `<div style="font-size: 0.72rem; color: #0284C7; font-weight: 600;">\u{1F4A7} Parfum: ${escapeHtml(order.perfume)}</div>` : ''}
+
               <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #CBD5E1; font-size: 0.7rem; font-weight: 700; color: #64748B;">
                 <span>STATUS: ${escapeHtml(order.status.toUpperCase())}</span>
                 <span>RAK: ${escapeHtml(order.rackLocation || 'A1')}</span>

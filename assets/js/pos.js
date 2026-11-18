@@ -39,6 +39,8 @@
         return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
       case 'package':
         return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`;
+      case 'bed':
+        return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/></svg>`;
       default:
         return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>`;
     }
@@ -51,6 +53,11 @@
 
   function formatRp(num) {
     return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+  }
+
+  function formatRpCompact(num) {
+    const n = Math.round(Number(num) || 0);
+    return (n > 0 && n % 1000 === 0) ? (n / 1000) + 'rb' : formatRp(n);
   }
 
   function formatNumberDots(num) {
@@ -79,44 +86,79 @@
   const rawServices = (window.POS_DATA && window.POS_DATA.services) || [];
   const rawCustomers = (window.POS_DATA && window.POS_DATA.customers) || [];
 
-  // Map 5 standard services matching index.html
-  const DEFAULT_SERVICES = [
-    { id: 'srv-1', name: 'Cuci Kering + Setrika', icon: 'shirt', minRate: 6000, maxRate: 6500, activeRate: 6000, unit: 'kg', estHours: 48, estText: '2 hari', workflow: 'full', category: 'Kiloan', dbId: null },
-    { id: 'srv-2', name: 'Cuci Kering Saja', icon: 'washing-machine', minRate: 4500, maxRate: 5000, activeRate: 4500, unit: 'kg', estHours: 48, estText: '2 hari', workflow: 'wash_only', category: 'Kiloan', dbId: null },
-    { id: 'srv-3', name: 'Setrika Saja', icon: 'iron', minRate: 4000, maxRate: 4500, activeRate: 4000, unit: 'kg', estHours: 24, estText: '1 hari', workflow: 'iron_only', category: 'Kiloan', dbId: null },
-    { id: 'srv-5', name: 'Kilat', icon: 'zap', minRate: 8500, maxRate: 10000, activeRate: 8500, unit: 'kg', estHours: 6, estText: '4-6 jam', workflow: 'full', category: 'Kilat', dbId: null },
-    { id: 'srv-4', name: 'Cuci Satuan', icon: 'package', minRate: 10000, maxRate: 25000, activeRate: 10000, unit: 'item', estHours: 48, estText: '2-3 hari', workflow: 'full', category: 'Satuan', dbId: null }
-  ];
+  // Build catalog from DB services (POS_DATA.services)
+  function pickServiceIcon(name) {
+    const n = String(name || '').toLowerCase();
+    if (n.includes('bed cover') || n.includes('selimut') || n.includes('sprei')) return 'bed';
+    if (n.includes('kilat') || n.includes('express')) return 'zap';
+    if (n.includes('setrika') && !n.includes('cuci')) return 'iron';
+    if (n.includes('kering saja') || (n.includes('cuci') && !n.includes('setrika'))) return 'washing-machine';
+    if (n.includes('satuan')) return 'package';
+    return 'shirt';
+  }
 
-  // Align with actual DB services if available
-  rawServices.forEach(dbSrv => {
-    const sName = dbSrv.nama_layanan.toLowerCase();
-    const price = parseFloat(dbSrv.harga);
-    if (sName.includes('kering') && sName.includes('setrika') && !sName.includes('kilat')) {
-      DEFAULT_SERVICES[0].dbId = dbSrv.id_layanan;
-      DEFAULT_SERVICES[0].minRate = price;
-      DEFAULT_SERVICES[0].activeRate = price;
-    } else if (sName.includes('kering saja') || (sName.includes('cuci kering') && !sName.includes('setrika'))) {
-      DEFAULT_SERVICES[1].dbId = dbSrv.id_layanan;
-      DEFAULT_SERVICES[1].minRate = price;
-      DEFAULT_SERVICES[1].activeRate = price;
-    } else if (sName.includes('setrika saja') || (sName.includes('setrika') && !sName.includes('cuci'))) {
-      DEFAULT_SERVICES[2].dbId = dbSrv.id_layanan;
-      DEFAULT_SERVICES[2].minRate = price;
-      DEFAULT_SERVICES[2].activeRate = price;
-    } else if (sName.includes('kilat') || sName.includes('express')) {
-      DEFAULT_SERVICES[3].dbId = dbSrv.id_layanan;
-      DEFAULT_SERVICES[3].minRate = price;
-      DEFAULT_SERVICES[3].activeRate = price;
-    } else if (sName.includes('satuan') || sName.includes('bed') || sName.includes('sepatu')) {
-      DEFAULT_SERVICES[4].dbId = dbSrv.id_layanan;
-      DEFAULT_SERVICES[4].minRate = price;
-      DEFAULT_SERVICES[4].activeRate = price;
-    }
-  });
+  function formatEstLabel(hours) {
+    const h = parseInt(hours, 10) || 24;
+    return h < 24 ? `${h} jam` : `${Math.ceil(h / 24)} hari`;
+  }
+
+  function isKilatRow(s) {
+    const category = s.nama_kategori || '';
+    return /kilat|express/i.test(s.nama_layanan) || /express/i.test(category);
+  }
+
+  function mapKgService(s) {
+    const hours = parseInt(s.estimasi_waktu, 10) || 24;
+    const kilat = isKilatRow(s);
+    return {
+      id: s.id_layanan,
+      name: s.nama_layanan,
+      category: kilat ? 'Kilat' : 'Kiloan',
+      unit: 'kg',
+      price: parseFloat(s.harga) || 0,
+      estHours: hours,
+      estText: formatEstLabel(hours),
+      icon: kilat ? 'zap' : pickServiceIcon(s.nama_layanan),
+      isKilat: kilat
+    };
+  }
+
+  const kgRows = rawServices.filter(s => (s.satuan || 'kg') === 'kg');
+  const satuanRows = rawServices
+    .filter(s => (s.satuan || '') === 'pcs')
+    .map(s => ({
+      id: s.id_layanan,
+      name: s.nama_layanan,
+      price: parseFloat(s.harga) || 0,
+      estHours: parseInt(s.estimasi_waktu, 10) || 24,
+      estText: formatEstLabel(s.estimasi_waktu)
+    }))
+    .sort((a, b) => a.price - b.price);
+
+  // Tile per layanan kg (kiloan + kilat), lalu satu tile gabungan untuk semua layanan satuan
+  const SERVICES = kgRows.map(mapKgService);
+  if (satuanRows.length > 0) {
+    const prices = satuanRows.map(v => v.price);
+    SERVICES.push({
+      id: 'satuan-group',
+      name: 'Cuci Satuan',
+      category: 'Satuan',
+      unit: 'pcs',
+      variants: satuanRows,
+      minRate: Math.min(...prices),
+      maxRate: Math.max(...prices),
+      estHours: Math.max(...satuanRows.map(v => v.estHours)),
+      estText: satuanRows[0].estText,
+      icon: 'package',
+      isKilat: false
+    });
+  }
+
+  const defaultService = SERVICES.find(s => /cuci kering saja/i.test(s.name)) || SERVICES[0] || null;
+  const defaultVariant = satuanRows.length > 0 ? satuanRows[0] : null;
 
   const STATE = {
-    services: DEFAULT_SERVICES,
+    services: SERVICES,
     customers: rawCustomers.map(c => ({
       id: c.id_pelanggan,
       name: c.nama_pelanggan,
@@ -125,13 +167,12 @@
     })),
     cartItems: [], // Multi-item cart
     posForm: {
-      serviceId: 'srv-2',
-      appliedRate: DEFAULT_SERVICES[1].activeRate || 5000,
+      serviceId: defaultService ? defaultService.id : '',
+      variantId: defaultVariant ? defaultVariant.id : '',
+      variantPrice: defaultVariant ? defaultVariant.price : 0,
       weightStr: '',
       weightVal: 0,
       dirtyWeight: false,
-      variantId: 'var-selimut',
-      variantPrice: 10000,
       notes: [],
       customNote: '',
       isPaid: true,
@@ -144,7 +185,9 @@
   };
 
   function getActiveService() {
-    return STATE.services.find(s => s.id === STATE.posForm.serviceId) || STATE.services[1];
+    return STATE.services.find(s => s.id === STATE.posForm.serviceId)
+      || STATE.services[0]
+      || { id: '', name: '-', unit: 'kg', price: 0, estHours: 24, estText: '-', category: 'Kiloan', isKilat: false, variants: null };
   }
 
   function getPosTotals() {
@@ -164,7 +207,7 @@
       }
     }
 
-    const appliedRate = isSatuan ? STATE.posForm.variantPrice : (activeSrv.activeRate || activeSrv.minRate || STATE.posForm.appliedRate);
+    const appliedRate = isSatuan ? STATE.posForm.variantPrice : activeSrv.price;
     const itemSubtotal = weightVal * appliedRate;
 
     // Total tagihan gabungan dari seluruh cartItems jika ada, atau item saat ini jika cart kosong
@@ -243,12 +286,9 @@
     const switchAnimClass = STATE.justSwitchedService ? 'is-switching' : '';
     STATE.justSwitchedService = false;
 
-    let estimasiText = '~2-3 hari ke depan';
-    if (activeSrv.estHours <= 12) {
-      estimasiText = '~4-6 jam hari ini';
-    } else if (activeSrv.estHours <= 24) {
-      estimasiText = '~1 hari ke depan';
-    }
+    let estimasiText = activeSrv.estHours <= 12
+      ? `~${activeSrv.estText} hari ini`
+      : `~${activeSrv.estText} ke depan`;
 
     const hasCustomer = !!(STATE.posForm.selectedCustomer || (STATE.posForm.customerNameInput && STATE.posForm.customerNameInput.trim()));
     const activeCustName = STATE.posForm.selectedCustomer
@@ -298,28 +338,20 @@
             </div>
 
             <div class="services-tile-grid">
-              ${STATE.services.map(srv => {
-                const isSelected = srv.id === STATE.posForm.serviceId;
-                const isKilatSrv = srv.category === 'Kilat' || srv.id === 'srv-5';
-                const isSatuanSrv = srv.category === 'Satuan';
-                const rateDisplay = srv.minRate !== srv.maxRate 
-                  ? `${formatRp(srv.minRate)} - ${Number(srv.maxRate).toLocaleString('id-ID')}` 
-                  : formatRp(srv.minRate);
-                return `
-                  <div class="service-tile ${isSelected ? 'active' : ''} ${isKilatSrv ? 'is-kilat' : ''} ${isSatuanSrv ? 'is-satuan-wide' : ''}" data-srv-id="${srv.id}">
+              ${STATE.services.map(srv => `
+                  <div class="service-tile ${srv.id === STATE.posForm.serviceId ? 'active' : ''} ${srv.isKilat ? 'is-kilat' : ''} ${srv.category === 'Satuan' ? 'is-satuan-wide' : ''}" data-srv-id="${srv.id}">
                     <div class="service-tile-left">
                       <div class="service-tile-icon">
                         ${getSvgIcon(srv.icon)}
                       </div>
                       <div>
-                        <div class="service-tile-name">${srv.name}</div>
-                        <div class="service-tile-rate">${rateDisplay}/${srv.unit}</div>
+                        <div class="service-tile-name">${escapeHtmlAttr(srv.name)}</div>
+                        <div class="service-tile-rate">${srv.category === 'Satuan' ? `${formatRp(srv.minRate)} - ${formatRp(srv.maxRate)}/${srv.unit}` : `${formatRp(srv.price)}/${srv.unit}`}</div>
                       </div>
                     </div>
                     <span class="service-tile-badge">${srv.estText}</span>
                   </div>
-                `;
-              }).join('')}
+                `).join('')}
             </div>
           </div>
 
@@ -404,22 +436,19 @@
                 </button>
               </div>
               <div class="pos-options-sheet">
-                ${isSatuan ? `
+                ${isSatuan && activeSrv.variants ? `
                   <div class="quiet-option-group" id="pos-satuan-group">
                     <span class="quiet-group-label">Item Satuan</span>
                     <div class="rate-segmented-pill">
-                      <button type="button" class="rate-pill-btn ${STATE.posForm.variantId === 'var-selimut' || !STATE.posForm.variantId ? 'active' : ''}" 
-                        data-var-id="var-selimut" data-var-price="10000">
-                        Selimut  •  10rb
-                      </button>
-                      <button type="button" class="rate-pill-btn ${STATE.posForm.variantId === 'var-bedcover' ? 'active' : ''}" 
-                        data-var-id="var-bedcover" data-var-price="25000">
-                        Bed cover  •  25rb
-                      </button>
+                      ${activeSrv.variants.map(v => `
+                        <button type="button" class="rate-pill-btn ${STATE.posForm.variantId === v.id ? 'active' : ''}"
+                          data-var-id="${v.id}" data-var-price="${v.price}">
+                          ${escapeHtmlAttr(v.name)}  •  ${formatRpCompact(v.price)}
+                        </button>
+                      `).join('')}
                     </div>
                   </div>
                 ` : ''}
-
                 <div class="quiet-option-group">
                   <span class="quiet-group-label">Catatan Cucian</span>
                   <div class="option-chips-container">
@@ -492,12 +521,7 @@
               <div class="receipt-item-box is-preview" id="receipt-item-box" style="border: 1px dashed #CBD5E1;">
                 <div class="item-box-top-row">
                   <div class="item-desc-col">
-                    <span class="item-name-heading">
-                      ${isSatuan 
-                        ? (STATE.posForm.variantId === 'var-bedcover' ? 'Bed Cover Besar' : (STATE.posForm.variantId === 'var-sepatu' ? 'Cuci Sepatu Premium' : 'Cuci Satuan - Selimut'))
-                        : activeSrv.name
-                      }
-                    </span>
+                    <span class="item-name-heading">${escapeHtmlAttr(isSatuan && activeSrv.variants ? (activeSrv.variants.find(v => v.id === STATE.posForm.variantId) || activeSrv.variants[0]).name : activeSrv.name)}</span>
                     <span class="item-rate-caption num-tabular">
                       <span id="receipt-item-weight" class="item-qty-readonly">${STATE.posForm.weightStr || weightVal}</span> ${activeSrv.unit} &times; <span id="receipt-rate-caption">${formatRp(appliedRate)}/${activeSrv.unit}</span>
                     </span>
@@ -653,7 +677,6 @@
         const srv = STATE.services.find(s => s.id === id);
         if (!srv) return;
         STATE.posForm.serviceId = srv.id;
-        STATE.posForm.appliedRate = srv.activeRate || srv.minRate;
         if (!STATE.posForm.dirtyWeight) {
           STATE.posForm.weightStr = '';
           STATE.posForm.weightVal = 0;
@@ -666,10 +689,8 @@
     // Satuan Variant Pills
     document.querySelectorAll('.rate-pill-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const vId = btn.getAttribute('data-var-id');
-        const price = parseInt(btn.getAttribute('data-var-price'), 10);
-        STATE.posForm.variantId = vId;
-        STATE.posForm.variantPrice = price;
+        STATE.posForm.variantId = btn.getAttribute('data-var-id');
+        STATE.posForm.variantPrice = parseInt(btn.getAttribute('data-var-price'), 10) || 0;
         renderPosWorkstation();
       });
     });
@@ -1021,23 +1042,23 @@
       return false;
     }
 
-    const itemName = isSatuan 
-      ? (STATE.posForm.variantId === 'var-bedcover' ? 'Bed Cover Besar' : (STATE.posForm.variantId === 'var-sepatu' ? 'Cuci Sepatu Premium' : 'Cuci Satuan - Selimut'))
-      : activeSrv.name;
+    const variant = isSatuan && activeSrv.variants
+      ? (activeSrv.variants.find(v => v.id === STATE.posForm.variantId) || activeSrv.variants[0])
+      : null;
 
     const newItem = {
       id: 'it_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
       serviceId: activeSrv.id,
-      dbId: activeSrv.dbId || (rawServices[0] ? rawServices[0].id_layanan : 'LAY-01'),
-      name: itemName,
+      dbId: variant ? variant.id : activeSrv.id,
+      name: variant ? variant.name : activeSrv.name,
       unit: activeSrv.unit,
       weight: weightVal,
       rate: appliedRate,
       subtotal: itemSubtotal,
       notes: [...STATE.posForm.notes],
       customNote: (STATE.posForm.customNote || '').trim(),
-      estHours: activeSrv.estHours || 24,
-      isKilat: activeSrv.category === 'Kilat' || activeSrv.id === 'srv-5'
+      estHours: variant ? variant.estHours : (activeSrv.estHours || 24),
+      isKilat: activeSrv.isKilat
     };
 
     STATE.cartItems.push(newItem);
@@ -1074,13 +1095,12 @@
 
   function resetPosForm(skipToast = false) {
     STATE.cartItems = [];
-    STATE.posForm.serviceId = 'srv-2';
-    STATE.posForm.appliedRate = DEFAULT_SERVICES[1].activeRate || 5000;
+    STATE.posForm.serviceId = defaultService ? defaultService.id : '';
+    STATE.posForm.variantId = defaultVariant ? defaultVariant.id : '';
+    STATE.posForm.variantPrice = defaultVariant ? defaultVariant.price : 0;
     STATE.posForm.weightStr = '';
     STATE.posForm.weightVal = 0;
     STATE.posForm.dirtyWeight = false;
-    STATE.posForm.variantId = 'var-selimut';
-    STATE.posForm.variantPrice = 10000;
     STATE.posForm.notes = [];
     STATE.posForm.customNote = '';
     STATE.posForm.isPaid = true;
@@ -1190,10 +1210,12 @@
       nama_pelanggan_baru: custId ? '' : custName,
       no_telepon_baru: custId ? '' : custPhone,
       catatan_khusus: allNotes.join(' | '),
-      parfum: 'Ocean Fresh',
       is_kilat: isAnyKilat,
       bayar_sekarang: STATE.posForm.isPaid ? 1 : 0,
-      jumlah_bayar: STATE.posForm.isPaid ? STATE.posForm.cashReceived : 0,
+      // Untuk Transfer/E-Wallet nominal dianggap pas sebesar total tagihan (otomatis lunas)
+      jumlah_bayar: !STATE.posForm.isPaid
+        ? 0
+        : (STATE.posForm.paymentMethod === 'Tunai' ? STATE.posForm.cashReceived : finalTotal),
       id_metode: STATE.posForm.isPaid 
         ? (STATE.posForm.paymentMethod === 'Tunai' ? 'MET-01' : (STATE.posForm.paymentMethod === 'Transfer' ? 'MET-02' : 'MET-03'))
         : 'MET-04',
@@ -1242,8 +1264,8 @@
         notes: allNotes,
         isPaid: STATE.posForm.isPaid,
         paymentMethod: STATE.posForm.paymentMethod,
-        deadlineAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-        rackLocation: 'Rak A-01'
+        deadlineAt: new Date(Date.now() + Math.max(...STATE.cartItems.map(it => Number(it.estHours) || 24)) * 3600 * 1000).toISOString(),
+        rackLocation: res.lokasi_rak || ''
       };
 
       previewThermalReceipt(orderForPrint);
@@ -1301,7 +1323,7 @@
                   ${order.notes && order.notes.length ? `Catatan  : ${order.notes.join(', ')}<br>` : ''}
                 `}
                 Estimasi : ${formatDateTime(order.deadlineAt)}<br>
-                Lokasi   : ${order.rackLocation || 'Rak A-01'}
+                Lokasi   : ${order.rackLocation || '-'}
               </div>
               <div class="receipt-dash-line"></div>
               <div style="display: flex; justify-content: space-between;">
@@ -1380,18 +1402,51 @@
       const phone = document.getElementById('new-cust-phone').value.trim();
       if (!name) return;
 
-      const newCust = {
-        id: 'CUST-' + String(STATE.customers.length + 1).padStart(3, '0'),
-        name: name,
-        phone: phone || '-'
-      };
-      STATE.customers.unshift(newCust);
-      STATE.posForm.selectedCustomer = newCust;
-      STATE.posForm.customerNameInput = newCust.name;
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const url = (window.POS_DATA && window.POS_DATA.customerStoreUrl) || 'index.php?page=pos&action=pelangganBaru';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Menyimpan...';
+      }
 
-      closeModal();
-      renderPosWorkstation();
-      showToast(`Pelanggan baru '${newCust.name}' berhasil didaftarkan.`, 'success', 'Pelanggan Terdaftar');
+      // Simpan ke database agar ID pelanggan asli (PEL-xxx) dan transaksi tidak gagal FK
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ nama_pelanggan: name, no_telepon: phone })
+      })
+      .then(async (r) => {
+        const res = await r.json().catch(() => ({}));
+        if (!r.ok || res.success === false) {
+          throw new Error(res.message || 'Gagal menyimpan pelanggan baru.');
+        }
+        return res;
+      })
+      .then(res => {
+        const c = res.customer || {};
+        const newCust = {
+          id: c.id_pelanggan,
+          name: c.nama_pelanggan || name,
+          phone: c.no_telepon || phone || '-'
+        };
+        STATE.customers.unshift(newCust);
+        STATE.posForm.selectedCustomer = newCust;
+        STATE.posForm.customerNameInput = newCust.name;
+
+        closeModal();
+        renderPosWorkstation();
+        showToast(`Pelanggan baru '${newCust.name}' berhasil disimpan.`, 'success', 'Pelanggan Terdaftar');
+      })
+      .catch(err => {
+        showToast(err.message || 'Gagal menyimpan pelanggan baru.', 'error', 'Gagal Simpan');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Simpan &amp; Pilih';
+        }
+      });
     });
   }
 
@@ -1471,7 +1526,7 @@
       STATE.cartItems = [
         {
           id: 'it_demo_1',
-          serviceId: 'srv-1',
+          serviceId: 'LAY-01',
           dbId: 'LAY-01',
           name: 'Cuci Kering + Setrika',
           unit: 'kg',
@@ -1480,25 +1535,25 @@
           subtotal: 22750,
           notes: ['Pisahkan Putih'],
           customNote: '',
-          estHours: 48,
+          estHours: 24,
           isKilat: false
         },
         {
           id: 'it_demo_2',
-          serviceId: 'srv-4',
+          serviceId: 'LAY-04',
           dbId: 'LAY-04',
-          name: 'Bed Cover Besar',
+          name: 'Bed Cover',
           unit: 'pcs',
           weight: 1,
           rate: 25000,
           subtotal: 25000,
           notes: ['Parfum Lavender'],
           customNote: '',
-          estHours: 48,
+          estHours: 24,
           isKilat: false
         }
       ];
-      STATE.posForm.cashReceived = 50000;
+      STATE.posForm.cashReceived = 47750;
     }
     renderPosWorkstation();
   }

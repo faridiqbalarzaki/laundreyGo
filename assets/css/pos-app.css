@@ -4046,17 +4046,8 @@
     }
 
     .orders-table-card .modern-table {
-      font-size: 0.76rem;
       width: 100%;
       table-layout: auto;
-    }
-
-    .orders-table-card .modern-table th {
-      padding: 0.45rem 0.5rem;
-      font-size: 0.65rem;
-      letter-spacing: 0.04em;
-      white-space: nowrap;
-      color: var(--ink-muted);
     }
 
     .orders-table-card .modern-table thead th {
@@ -4068,7 +4059,6 @@
     }
 
     .orders-table-card .modern-table td {
-      padding: 0.35rem 0.5rem;
       border-bottom: 1px solid rgba(15, 23, 42, 0.055);
       vertical-align: middle;
     }
@@ -4090,7 +4080,7 @@
     .table-order-code {
       font-family: var(--font-main);
       font-variant-numeric: tabular-nums;
-      font-size: 0.76rem;
+      font-size: 0.82rem;
       font-weight: 700;
       letter-spacing: -0.015em;
       color: var(--ink);
@@ -4259,7 +4249,7 @@
     }
 
     .selesai-sub-pill {
-      font-size: 0.69rem;
+      font-size: 0.74rem;
       font-weight: 700;
       color: #0369A1;
       background: rgba(2, 132, 199, 0.08);
@@ -5572,6 +5562,9 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+      }
+      .mobile-drawer-nav .sidebar-menu-group-label {
+        display: none;
       }
 
       .mobile-drawer-footer {

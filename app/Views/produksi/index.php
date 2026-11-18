@@ -57,7 +57,6 @@ foreach ($allRawOrders as $row) {
         'rate'          => $rate,
         'subtotal'      => $subtotal,
         'status'        => $frontStatus,
-        'perfume'       => $row['parfum'] ?? 'Ocean',
         'notes'         => array_values($notesArr),
         'slaText'       => $slaDisplay,
         'isUrgent'      => $isUrgent,
@@ -1112,26 +1111,19 @@ function closeModal() {
 }
 
 /* ========================================================================
-   TOAST NOTIFICATION TRAY (Foto 2: Hitam Melayang dengan Tombol Batalkan)
+   TOAST NOTIFICATION (Unified Mobile Shell createui Toast)
    ======================================================================== */
 function showToast(msg, withUndo = false) {
-  if (STATE.undoTimer) clearTimeout(STATE.undoTimer);
-  const tray = document.getElementById('toast-tray');
-  if (!tray) return;
-
-  tray.innerHTML = `
-    <div class="toast-item">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <span>${escapeHtml(msg)}</span>
-      </div>
-      ${withUndo ? `<button type="button" class="toast-undo-btn" onclick="rollbackLastAction()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg> <span>Urungkan</span></button>` : ''}
-    </div>
-  `;
-
-  STATE.undoTimer = setTimeout(() => {
-    tray.innerHTML = '';
-  }, 5000);
+  if (typeof window.showToast === 'function') {
+    const action = withUndo ? {
+      text: 'Urungkan',
+      onClick: function() {
+        if (typeof rollbackLastAction === 'function') rollbackLastAction();
+      }
+    } : null;
+    window.showToast(msg, 'info', 'Lantai Produksi', 4500, action);
+    return;
+  }
 }
 
 // Start on DOM ready

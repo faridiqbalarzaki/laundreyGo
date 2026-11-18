@@ -24,7 +24,7 @@ window.POS_DATA = {
     customers: <?= json_encode($pelangganList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
     cashierName: <?= json_encode($cashierName) ?>,
     storeUrl: <?= json_encode(\App\Core\Helper::url('pos', ['action' => 'store'])) ?>,
-    customerStoreUrl: <?= json_encode(\App\Core\Helper::url('pelanggan', ['action' => 'store'])) ?>
+    customerStoreUrl: <?= json_encode(\App\Core\Helper::url('pos', ['action' => 'pelangganBaru'])) ?>
 };
 </script>
-<script src="<?= \App\Core\Helper::asset('js/pos.js') ?>"></script>
+<script src="<?= \App\Core\Helper::asset('js/pos.js') ?>?v=<?= @filemtime(__DIR__ . '/../../../assets/js/pos.js') ?>"></script>

@@ -86,6 +86,8 @@ switch ($page) {
         $controller = new PosController();
         if ($action === 'store' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $controller->store();
+        } elseif ($action === 'pelangganBaru' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->storePelanggan();
         } elseif ($action === 'searchPelanggan') {
             $controller->searchPelanggan();
         } else {

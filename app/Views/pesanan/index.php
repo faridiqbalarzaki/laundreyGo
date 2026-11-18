@@ -19,10 +19,9 @@ foreach ($ordersList as $row) {
     elseif (str_contains($rawStatus, 'selesai') || str_contains($rawStatus, 'ambil')) $statusKey = 'selesai';
 
     $serv = $row['daftar_layanan'] ?? $row['nama_layanan'] ?? 'Cuci Kering + Setrika';
-    $parf = $row['parfum'] ?? 'Ocean Fresh';
     $cat = (stripos($serv, 'Satuan') !== false) ? 'Satuan' : ((stripos($serv, 'Setrika') !== false && stripos($serv, 'Cuci') === false) ? 'Setrika' : 'Kiloan');
 
-    $tags = [$cat, $parf];
+    $tags = [$cat];
     if ($isKilat) $tags[] = 'Kilat';
 
     $clientOrders[] = [
@@ -34,7 +33,7 @@ foreach ($ordersList as $row) {
         'customerPhone' => $row['no_telepon'] ?? '-',
         'service' => $serv,
         'serviceName' => $serv,
-        'perfume' => $parf,
+        'perfume' => '',
         'tags' => $tags,
         'status' => $statusKey,
         'isPaid' => $isPaid,

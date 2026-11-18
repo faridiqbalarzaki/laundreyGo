@@ -1,6 +1,7 @@
 <?php
 $searchQuery = $_GET['q'] ?? '';
 $activeRak = $_GET['rak'] ?? 'Semua';
+$activeTab = $currentTab ?? ($_GET['tab'] ?? 'aktif');
 $ordersList = $orders ?? [];
 
 ?>
@@ -12,14 +13,16 @@ $ordersList = $orders ?? [];
     <div class="selesai-header-bar" style="display: flex; justify-content: space-between; align-items: center;">
         <div class="selesai-title-group" style="display: flex; align-items: center; gap: 10px;">
             <h2 class="selesai-page-title" style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #0F172A;">Cucian Selesai</h2>
-            <span class="selesai-sub-pill" style="font-size: 0.74rem; font-weight: 700; background: #E0F2FE; color: #0284C7; padding: 3px 10px; border-radius: 9999px;">Siap Diambil</span>
+            <span class="selesai-sub-pill" style="font-size: 0.74rem; font-weight: 700; background: #E0F2FE; color: #0284C7; padding: 3px 10px; border-radius: 9999px;">
+                <?= $activeTab === 'riwayat' ? 'Riwayat Penyerahan Hari Ini' : 'Siap Diambil di Rak' ?>
+            </span>
         </div>
         <?php include __DIR__ . '/../layouts/kasir_header_actions.php'; ?>
     </div>
 
-    <!-- Tier 2: Toolbar Inline (Pencarian di kiri, Tombol Ekspor di kanan) -->
+    <!-- Tier 2: Toolbar Inline (Pencarian di kiri, Tab Switcher di tengah, Tombol Ekspor di kanan) -->
     <div class="orders-inline-toolbar orders-filter-bar-wrap" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-        <div class="orders-search-box" style="position: relative; flex: 1 1 260px; max-width: 340px;">
+        <div class="orders-search-box" style="position: relative; flex: 1 1 240px; max-width: 320px;">
             <span class="orders-search-icon" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94A3B8; display: inline-flex;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </span>
@@ -30,7 +33,19 @@ $ordersList = $orders ?? [];
                 style="padding-left: 34px; height: 36px; border-radius: 12px; font-size: 0.82rem; border: 1px solid #E2E8F0;">
         </div>
 
-        <div style="flex: 1;"></div>
+        <!-- Segmented Tab: Menunggu di Rak (Aktif) vs Diserahkan Hari Ini -->
+        <div class="selesai-tab-dock" style="display: inline-flex; background: #F1F5F9; padding: 3px; border-radius: 9999px; gap: 4px;">
+            <a href="<?= \App\Core\Helper::url('pesanan', ['action' => 'selesai', 'tab' => 'aktif', 'rak' => $activeRak]) ?>"
+                class="selesai-tab-btn <?= $activeTab === 'aktif' ? 'is-active' : '' ?>"
+                style="padding: 5px 14px; border-radius: 9999px; font-size: 0.74rem; font-weight: 700; text-decoration: none; transition: all 150ms ease; <?= $activeTab === 'aktif' ? 'background: #0284C7; color: #FFFFFF; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);' : 'color: #64748B;' ?>">
+                Menunggu di Rak
+            </a>
+            <a href="<?= \App\Core\Helper::url('pesanan', ['action' => 'selesai', 'tab' => 'riwayat', 'rak' => $activeRak]) ?>"
+                class="selesai-tab-btn <?= $activeTab === 'riwayat' ? 'is-active' : '' ?>"
+                style="padding: 5px 14px; border-radius: 9999px; font-size: 0.74rem; font-weight: 700; text-decoration: none; transition: all 150ms ease; <?= $activeTab === 'riwayat' ? 'background: #0284C7; color: #FFFFFF; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);' : 'color: #64748B;' ?>">
+                Diserahkan Hari Ini
+            </a>
+        </div>
 
         <button type="button" class="btn btn-secondary" onclick="window.print()" style="height: 32px; font-size: 0.76rem; font-weight: 600; padding: 0 14px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #E2E8F0; background: #FFFFFF; color: #0F172A;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -60,7 +75,7 @@ $ordersList = $orders ?? [];
                         <tr>
                             <td colspan="9" style="text-align: center; padding: 40px 16px; color: #94A3B8;">
                                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 8px; display: block; opacity: 0.4;"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-                                Belum ada cucian yang siap diambil di rak saat ini.
+                                <?= $activeTab === 'riwayat' ? 'Belum ada cucian yang diserahkan hari ini.' : 'Semua cucian di rak telah diserahkan ke pelanggan.' ?>
                             </td>
                         </tr>
                     <?php else: ?>
@@ -76,8 +91,7 @@ $ordersList = $orders ?? [];
                             $serviceTitle = !empty($order['daftar_layanan']) ? $order['daftar_layanan'] : (!empty($order['nama_layanan']) ? $order['nama_layanan'] : 'Cuci Kering + Setrika');
                             $beratVal = !empty($order['total_berat']) ? (float)$order['total_berat'] : 1;
                             $satuanVal = !empty($order['satuan']) ? $order['satuan'] : 'kg';
-                            $parfumVal = !empty($order['parfum']) ? $order['parfum'] : 'Ocean Fresh';
-                            $serviceSub = "{$beratVal} {$satuanVal} • Parfum {$parfumVal}";
+                            $serviceSub = "{$beratVal} {$satuanVal}";
                             $payMethod = !empty($order['metode_bayar']) ? $order['metode_bayar'] : ($isLunas ? 'Tunai' : '');
                             $rakLocation = !empty($order['lokasi_rak']) ? $order['lokasi_rak'] : 'Belum di rak';
                             $waMessage = urlencode("Halo {$order['nama_pelanggan']}, cucian Anda dengan nomor nota {$orderId} sudah selesai dan siap diambil di LaundryGo ({$rakLocation}). Total tagihan: " . ($isLunas ? 'Lunas' : \App\Core\Helper::rupiah($order['total_harga'] ?? 0)) . ". Terima kasih!");
@@ -85,14 +99,14 @@ $ordersList = $orders ?? [];
                             <tr class="selesai-row-item <?= $statusDiserahkan ? 'is-delivered-row' : '' ?>">
                                 <td class="col-check"><input type="checkbox" class="row-check"></td>
                                 <td>
-                                    <span class="table-order-code num-tabular nota-val" style="font-weight: 700; color: var(--ink); font-size: 0.81rem; white-space: nowrap;"><?= htmlspecialchars($orderId) ?></span>
+                                    <span class="table-order-code num-tabular nota-val"><?= htmlspecialchars($orderId) ?></span>
                                 </td>
                                 <td>
-                                    <strong class="cust-val" style="display: block; line-height: 1.25; color: var(--ink); font-size: 0.80rem; white-space: nowrap;"><?= htmlspecialchars($order['nama_pelanggan'] ?? 'Pelanggan Umum') ?></strong>
+                                    <strong class="cust-val" style="display: block; line-height: 1.25; color: var(--ink); white-space: nowrap;"><?= htmlspecialchars($order['nama_pelanggan'] ?? 'Pelanggan Umum') ?></strong>
                                     <div class="orders-spec-sub" style="font-variant-numeric: tabular-nums; white-space: nowrap;"><?= htmlspecialchars($order['no_telepon'] ?? '-') ?></div>
                                 </td>
                                 <td>
-                                    <strong style="display: block; line-height: 1.25; color: var(--ink); font-size: 0.80rem; white-space: nowrap;"><?= htmlspecialchars($serviceTitle) ?></strong>
+                                    <strong style="display: block; line-height: 1.25; color: var(--ink); white-space: nowrap;"><?= htmlspecialchars($serviceTitle) ?></strong>
                                     <div class="orders-spec-sub" style="white-space: nowrap;"><?= htmlspecialchars($serviceSub) ?></div>
                                 </td>
                                 <td style="text-align: center; white-space: nowrap;">
@@ -109,7 +123,7 @@ $ordersList = $orders ?? [];
                                         <div class="orders-spec-sub" style="justify-content: center;"><?= htmlspecialchars($payMethod) ?></div>
                                     <?php endif; ?>
                                 </td>
-                                <td class="num-tabular font-mono" style="font-size: 0.79rem; font-weight: 700; text-align: right; white-space: nowrap; color: var(--ink);">
+                                <td class="num-tabular font-mono" style="font-size: 0.84rem; font-weight: 700; text-align: right; white-space: nowrap; color: var(--ink);">
                                     <?= \App\Core\Helper::rupiah($order['total_harga'] ?? 0) ?>
                                 </td>
                                 <td style="text-align: center; white-space: nowrap;">
@@ -143,12 +157,16 @@ $ordersList = $orders ?? [];
                                             <?php else: ?>
                                                 <form action="<?= \App\Core\Helper::url('pesanan', ['action' => 'bayarDanSerahkan']) ?>" method="POST" style="display: inline;"
                                                     data-confirm="true"
+                                                    data-confirm-payment="true"
+                                                    data-confirm-total="<?= (float)($order['total_harga'] ?? 0) ?>"
                                                     data-confirm-title="Terima Pembayaran &amp; Serahkan Cucian?"
                                                     data-confirm-message="Tagihan sebesar <?= \App\Core\Helper::rupiah($order['total_harga'] ?? 0) ?> akan diproses lunas dan pesanan diserahkan ke pelanggan."
                                                     data-confirm-badge="<?= htmlspecialchars($orderId) ?> &bull; <?= htmlspecialchars($order['nama_pelanggan'] ?? 'Pelanggan Umum') ?> &bull; <?= \App\Core\Helper::rupiah($order['total_harga'] ?? 0) ?>"
                                                     data-confirm-btn="Ya, Lunasi &amp; Serahkan"
                                                     data-confirm-type="primary">
                                                     <input type="hidden" name="id_pesanan" value="<?= $order['id_pesanan'] ?>">
+                                                    <input type="hidden" name="id_metode" value="MET-01">
+                                                    <input type="hidden" name="jumlah_bayar" value="<?= (float)($order['total_harga'] ?? 0) ?>">
                                                     <button type="submit" class="btn btn-secondary orders-action-btn btn-outline-pay">
                                                         Bayar &amp; Ambil
                                                     </button>

@@ -67,14 +67,10 @@
 
             <!-- Notes & Preferences -->
             <div class="drawer-section-card">
-                <div class="section-title">Catatan & Parfum</div>
+                <div class="section-title">Catatan & Preferensi</div>
                 <div class="drawer-info-grid">
                     <div>
-                        <span class="text-muted">Aroma Parfum:</span>
-                        <span id="drawerParfum">-</span>
-                    </div>
-                    <div>
-                        <span class="text-muted">Prioritas:</span>
+                        <span class="text-muted">Prioritas Layanan:</span>
                         <span id="drawerKilat">-</span>
                     </div>
                     <div style="grid-column: span 2;">

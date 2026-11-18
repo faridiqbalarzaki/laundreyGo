@@ -39,9 +39,20 @@ class PosController {
 
         $idPelanggan = Helper::sanitize($input['id_pelanggan'] ?? '');
         $catatanKhusus = Helper::sanitize($input['catatan_khusus'] ?? '');
-        $parfum = Helper::sanitize($input['parfum'] ?? 'Ocean Fresh');
         $isKilat = !empty($input['is_kilat']);
         $items = $input['items'] ?? [];
+
+        // Pastikan ID pelanggan benar-benar ada di database.
+        // Tanpa ini, ID fiktif (mis. dari modal pelanggan yang belum tersimpan)
+        // akan melanggar foreign key dan membuat transaksi gagal tanpa pesan jelas.
+        if ($idPelanggan !== '' && !Pelanggan::findById($idPelanggan)) {
+            $notice = 'Pelanggan yang dipilih tidak ditemukan di database. Silakan pilih pelanggan yang tersedia atau simpan pelanggan baru terlebih dahulu.';
+            if ($jsonData) {
+                Helper::jsonResponse(['success' => false, 'message' => $notice], 400);
+            }
+            Helper::setFlash('error', $notice);
+            Helper::redirect(Helper::url('pos'));
+        }
 
         // Jika pelanggan baru diinput langsung (inline)
         if (empty($idPelanggan) && !empty($input['nama_pelanggan_baru'])) {
@@ -136,7 +147,6 @@ class PosController {
 
         if ($bayarSekarang) {
             $jumlahBayar = (float)($input['jumlah_bayar'] ?? 0);
-            $kembalian = max(0, $jumlahBayar - $totalHarga);
             $rawMetode = $input['id_metode'] ?? 'MET-01';
             $methodMap = [
                 'tunai'    => 'MET-01',
@@ -147,7 +157,21 @@ class PosController {
                 'ewallet'  => 'MET-03',
                 'nanti'    => 'MET-04'
             ];
-            $idMetode = $methodMap[strtolower($rawMetode)] ?? $rawMetode;
+            $idMetode = $methodMap[strtolower((string)$rawMetode)] ?? (string)$rawMetode;
+
+            // Metode yang tersedia di tabel metode_pembayaran. Jika tidak dikenal,
+            // gunakan Tunai agar tidak melanggar foreign key.
+            if (!in_array($idMetode, ['MET-01', 'MET-02', 'MET-03'], true)) {
+                $idMetode = 'MET-01';
+            }
+
+            // Pembayaran non-tunai (transfer / e-wallet) tidak memakai input uang tunai.
+            // Anggap nominal yang dibayar sama dengan total tagihan agar otomatis Lunas.
+            if ($idMetode !== 'MET-01' && $jumlahBayar <= 0) {
+                $jumlahBayar = $totalHarga;
+            }
+
+            $kembalian = max(0, $jumlahBayar - $totalHarga);
 
             if ($idMetode === 'MET-01' && $jumlahBayar < $totalHarga) {
                 if ($jsonData) {
@@ -174,7 +198,6 @@ class PosController {
             'status_pembayaran' => $statusPembayaran,
             'lokasi_rak'        => null,
             'catatan_khusus'    => $catatanKhusus,
-            'parfum'            => $parfum,
             'is_kilat'          => $isKilat,
             'id_anggota'        => Auth::id()
         ];
@@ -186,9 +209,10 @@ class PosController {
 
             if ($jsonData) {
                 Helper::jsonResponse([
-                    'success'    => true,
-                    'message'    => 'Pesanan berhasil disimpan!',
-                    'id_pesanan' => $idPesanan
+                    'success'      => true,
+                    'message'      => 'Pesanan berhasil disimpan!',
+                    'id_pesanan'   => $idPesanan,
+                    'lokasi_rak'   => $orderData['lokasi_rak'] ?? null
                 ]);
             }
 
@@ -211,5 +235,59 @@ class PosController {
         $q = Helper::sanitize($_GET['q'] ?? '');
         $data = Pelanggan::search($q);
         Helper::jsonResponse($data);
+    }
+
+    /**
+     * Endpoint API simpan pelanggan baru langsung dari POS (AJAX/JSON).
+     * Mengembalikan ID pelanggan asli agar transaksi tidak melanggar foreign key.
+     */
+    public function storePelanggan(): void {
+        Auth::requireRole(['Admin', 'Kasir']);
+
+        $rawInput = file_get_contents('php://input');
+        $jsonData = json_decode($rawInput, true);
+        $input = $jsonData ?? $_POST;
+
+        $nama = trim(strip_tags((string)($input['nama_pelanggan'] ?? '')));
+        $rawTelp = trim((string)($input['no_telepon'] ?? ''));
+        $alamat = trim(strip_tags((string)($input['alamat'] ?? '')));
+
+        if (mb_strlen($nama) < 2 || mb_strlen($nama) > 100 || !preg_match('/^[a-zA-Z\s\.\'\-]+$/u', $nama)) {
+            Helper::jsonResponse(['success' => false, 'message' => 'Nama pelanggan tidak valid. Minimal 2 karakter, hanya huruf, spasi, titik, atau strip.'], 400);
+        }
+
+        if ($rawTelp === '' || $rawTelp === '-') {
+            Helper::jsonResponse(['success' => false, 'message' => 'Nomor HP pelanggan wajib diisi.'], 400);
+        }
+
+        if (!Helper::isValidPhone($rawTelp)) {
+            Helper::jsonResponse(['success' => false, 'message' => 'Nomor HP tidak valid. Contoh format yang benar: 08123456789.'], 400);
+        }
+
+        $telp = Helper::normalizePhone($rawTelp);
+
+        try {
+            $id = Pelanggan::create([
+                'nama_pelanggan' => $nama,
+                'no_telepon'     => $telp,
+                'alamat'         => $alamat
+            ]);
+        } catch (\Throwable $e) {
+            error_log('Create customer error: ' . $e->getMessage());
+            Helper::jsonResponse(['success' => false, 'message' => 'Gagal menyimpan pelanggan baru ke database.'], 500);
+        }
+
+        LogAktivitas::log('Tambah Pelanggan', "Menambahkan pelanggan baru {$nama} ({$id}) dari POS", Auth::id());
+
+        Helper::jsonResponse([
+            'success'  => true,
+            'message'  => 'Pelanggan baru berhasil disimpan.',
+            'customer' => [
+                'id_pelanggan'   => $id,
+                'nama_pelanggan' => $nama,
+                'no_telepon'     => $telp,
+                'alamat'         => $alamat
+            ]
+        ]);
     }
 }

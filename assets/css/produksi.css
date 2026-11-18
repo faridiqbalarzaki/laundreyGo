@@ -43,7 +43,7 @@
       --radius-lg: 16px;
       --radius-pill: 9999px;
       --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-      --font-num: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-num: var(--font-main);
       --font-mono: 'JetBrains Mono', monospace;
       --ease-drawer: cubic-bezier(0.16, 1, 0.3, 1);
     }

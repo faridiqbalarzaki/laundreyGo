@@ -107,11 +107,11 @@ class Pesanan {
             $sqlOrder = "INSERT INTO pesanan (
                             id_pesanan, tanggal_masuk, tanggal_keluar, status_cucian, 
                             total_harga, status_pembayaran, lokasi_rak, catatan_khusus, 
-                            parfum, is_kilat, id_pelanggan, id_anggota
+                            is_kilat, id_pelanggan, id_anggota
                          ) VALUES (
                             :id, CURRENT_TIMESTAMP, :tgl_keluar, :status_cucian,
                             :total, :status_bayar, :rak, :catatan,
-                            :parfum, :kilat, :pelanggan, :anggota
+                            :kilat, :pelanggan, :anggota
                          )";
             
             $stmt = $pdo->prepare($sqlOrder);
@@ -123,7 +123,6 @@ class Pesanan {
                 'status_bayar'  => $orderData['status_pembayaran'] ?? 'Belum Lunas',
                 'rak'           => $orderData['lokasi_rak'] ?? null,
                 'catatan'       => $orderData['catatan_khusus'] ?? '',
-                'parfum'        => $orderData['parfum'] ?? 'Ocean Fresh',
                 'kilat'         => !empty($orderData['is_kilat']) ? 1 : 0,
                 'pelanggan'     => $orderData['id_pelanggan'],
                 'anggota'       => $orderData['id_anggota'] ?? null
@@ -208,7 +207,12 @@ class Pesanan {
                 }
             }
 
-            $sql = "UPDATE pesanan SET status_cucian = :status {$updateRakSql} WHERE id_pesanan = :id";
+            $updateKeluarSql = "";
+            if ($newStatus === 'Selesai') {
+                $updateKeluarSql = ", tanggal_keluar = CURRENT_TIMESTAMP";
+            }
+
+            $sql = "UPDATE pesanan SET status_cucian = :status {$updateRakSql} {$updateKeluarSql} WHERE id_pesanan = :id";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
 
@@ -324,11 +328,18 @@ class Pesanan {
     /**
      * Mengambil daftar pesanan yang siap diambil di rak
      * Terintegrasi 100% database tanpa data dummy
+     * @param string|null $rak Filter lokasi rak
+     * @param string $tab 'aktif' (hanya Siap Diambil), 'riwayat' (Sudah diserahkan hari ini), atau 'semua'
      */
-    public static function getSiapAmbil(?string $rak = null, bool $includeCompleted = true): array {
-        $statusCondition = $includeCompleted 
-            ? "ps.status_cucian IN ('Siap Diambil', 'Selesai', 'Sudah Diambil')" 
-            : "ps.status_cucian = 'Siap Diambil'";
+    public static function getSiapAmbil(?string $rak = null, string $tab = 'aktif'): array {
+        if ($tab === 'riwayat') {
+            $statusCondition = "ps.status_cucian IN ('Selesai', 'Sudah Diambil') AND (DATE(ps.tanggal_keluar) = CURRENT_DATE OR EXISTS (SELECT 1 FROM riwayat_status rw WHERE rw.id_pesanan = ps.id_pesanan AND rw.status IN ('Selesai', 'Sudah Diambil') AND DATE(rw.waktu_status) = CURRENT_DATE))";
+        } elseif ($tab === 'semua') {
+            $statusCondition = "ps.status_cucian IN ('Siap Diambil', 'Selesai', 'Sudah Diambil')";
+        } else {
+            // Default: 'aktif' - hanya yang masih ada di rak & belum diambil pelanggan
+            $statusCondition = "ps.status_cucian = 'Siap Diambil'";
+        }
 
         $sql = "SELECT ps.*, p.nama_pelanggan, p.no_telepon, p.alamat,
                 (SELECT mp.nama_metode FROM pembayaran pay JOIN metode_pembayaran mp ON pay.id_metode = mp.id_metode WHERE pay.id_pesanan = ps.id_pesanan ORDER BY pay.tanggal_pembayaran DESC LIMIT 1) AS metode_bayar,
@@ -349,6 +360,19 @@ class Pesanan {
         $sql .= " ORDER BY ps.tanggal_keluar DESC, ps.tanggal_masuk DESC, ps.id_pesanan DESC";
 
         return Database::query($sql, $params);
+    }
+
+    /**
+     * Menghitung total cucian yang saat ini aktif di rak menunggu diambil
+     */
+    public static function countSiapAmbil(): int {
+        try {
+            $sql = "SELECT COUNT(*) FROM pesanan WHERE status_cucian = 'Siap Diambil'";
+            $pdo = Database::getConnection();
+            return (int)$pdo->query($sql)->fetchColumn();
+        } catch (\Exception $e) {
+            return 0;
+        }
     }
 
     /**

@@ -68,7 +68,6 @@ class AuthController {
             LogAktivitas::log('Logout', 'User keluar dari sistem', Auth::id());
         }
         Auth::logout();
-        Helper::setFlash('success', 'Anda telah berhasil logout.');
         Helper::redirect(Helper::url('login'));
     }
 }

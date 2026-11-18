@@ -31,12 +31,17 @@ class PesananController {
         Auth::requireRole(['Admin', 'Kasir']);
 
         $rak = $_GET['rak'] ?? 'Semua';
-        $orders = Pesanan::getSiapAmbil($rak);
+        $tab = $_GET['tab'] ?? 'aktif';
+        if (!in_array($tab, ['aktif', 'riwayat', 'semua'], true)) {
+            $tab = 'aktif';
+        }
+        $orders = Pesanan::getSiapAmbil($rak, $tab);
 
         View::render('pesanan/selesai', [
-            'title'     => 'Siap Diambil & Rak - LaundryGo',
-            'orders'    => $orders,
-            'activeRak' => $rak
+            'title'      => 'Siap Diambil & Rak - LaundryGo',
+            'orders'     => $orders,
+            'activeRak'  => $rak,
+            'currentTab' => $tab
         ]);
     }
 
@@ -132,6 +137,9 @@ class PesananController {
         if ($order['status_pembayaran'] !== 'Lunas') {
             $bayar = (float)($_POST['jumlah_bayar'] ?? $order['total_harga']);
             $metode = $_POST['id_metode'] ?? 'MET-01';
+            if (!in_array($metode, ['MET-01', 'MET-02', 'MET-03'], true)) {
+                $metode = 'MET-01';
+            }
             $kembali = max(0, $bayar - (float)$order['total_harga']);
 
             $paid = Pesanan::bayarPelunasan($id, $bayar, $kembali, $metode, Auth::id());
@@ -145,7 +153,7 @@ class PesananController {
         Pesanan::updateStatus($id, 'Selesai', Auth::id(), 'Pesanan telah diambil oleh pelanggan');
 
         LogAktivitas::log('Pengambilan Pesanan', "Pesanan {$id} diambil oleh pelanggan", Auth::id());
-        Helper::setFlash('success', "Pesanan {$id} berhasil diserahkan ke pelanggan.");
+        Helper::setFlash('success', "Pesanan {$id} berhasil diserahkan ke pelanggan dan diarsipkan ke Daftar Pesanan.");
         Helper::redirect(Helper::url('pesanan', ['action' => 'selesai']));
     }
 }

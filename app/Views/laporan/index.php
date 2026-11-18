@@ -87,7 +87,7 @@ $isCustomActive = !empty($_GET['custom_date']);
         </div>
 
         <!-- Sisi Kanan: Ekspor PDF / Excel & Laporan Akhir Bulan -->
-        <div style="display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0;">
+        <div class="laporan-toolbar-actions" style="display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0;">
             <!-- Tombol 1: Ekspor PDF / Excel -->
             <button type="button" onclick="window.print()"
                 style="display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 9999px; background: #ffffff; border: 1px solid #cbd5e1; color: #0284c7; font-size: 0.80rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;">
@@ -110,7 +110,7 @@ $isCustomActive = !empty($_GET['custom_date']);
     <!-- ========================================================================
          3 KARTU FINANSIAL UTAMA (FOTO 3)
          ======================================================================== -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;">
+    <div class="laporan-stat-grid">
         
         <!-- Kartu 1: Total pemasukan lunas (Bulan ini) -->
         <div class="bento-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between;">
@@ -160,7 +160,7 @@ $isCustomActive = !empty($_GET['custom_date']);
     <!-- ========================================================================
          2 KARTU BAWAH: METODE PEMBAYARAN & PIUTANG (FOTO 3)
          ======================================================================== -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+    <div class="laporan-pair-grid">
         
         <!-- Kartu Kiri: Pemasukan per metode pembayaran (Real-time) -->
         <div class="bento-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 22px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; min-height: 200px;">

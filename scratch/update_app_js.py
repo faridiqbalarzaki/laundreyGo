@@ -1,5 +1,5 @@
 new_code = '''// 5. GLOBAL TOAST NOTIFICATION API (createui Showcase Style)
-window.showToast = function(message, type = 'success', title = null, duration = 4200) {
+window.showToast = function(message, type = 'success', title = null, duration = 4200, action = null) {
     let container = document.getElementById('flashToastContainer');
     if (!container) {
         container = document.createElement('div');
@@ -48,12 +48,25 @@ window.showToast = function(message, type = 'success', title = null, duration = 
                 </div>
                 <div class="flash-toast-message">${escapeHtml(message)}</div>
             </div>
+            ${action && action.text ? `<button type="button" class="flash-toast-action-btn">${escapeHtml(action.text)}</button>` : ''}
             <button type="button" class="flash-toast-close" title="Tutup Notifikasi" aria-label="Tutup Notifikasi">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
         <div class="flash-toast-progress"></div>
     `;
+
+    if (action && typeof action.onClick === 'function') {
+        const actBtn = toast.querySelector('.flash-toast-action-btn');
+        if (actBtn) {
+            actBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                action.onClick();
+                toast.classList.add('is-leaving');
+                setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 180);
+            });
+        }
+    }
 
     container.appendChild(toast);
     if (window.__attachToastBehavior) {
@@ -167,7 +180,6 @@ if start_pos == -1 or end_pos == -1:
     print('ERROR: markers not found!', start_pos, end_pos)
     exit(1)
 
-# Format replacement with the same line ending style as existing file
 is_crlf = '\r\n' in content
 replacement = new_code.replace('\r\n', '\n')
 if is_crlf:
@@ -180,4 +192,4 @@ new_content = content[:start_pos] + replacement + content[end_pos:]
 with open(file_path, 'w', encoding='utf-8') as f:
     f.write(new_content)
 
-print('SUCCESSFULLY UPDATED app.js!')
+print('SUCCESSFULLY UPDATED app.js with action button support!')

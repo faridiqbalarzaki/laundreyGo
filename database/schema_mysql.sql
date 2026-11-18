@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS `pesanan` (
     `status_pembayaran` VARCHAR(30) DEFAULT 'Belum Lunas',
     `lokasi_rak` VARCHAR(30),
     `catatan_khusus` TEXT,
-    `parfum` VARCHAR(50) DEFAULT 'Ocean Fresh',
     `is_kilat` TINYINT(1) DEFAULT 0,
     `id_pelanggan` VARCHAR(10) NOT NULL,
     `id_anggota` VARCHAR(10),
