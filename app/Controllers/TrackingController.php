@@ -15,9 +15,9 @@ class TrackingController {
 
         if (!empty($keyword)) {
             // Validasi format nomor nota standar LaundryGo (LG-YYMMDD-XXX)
-            if (!Helper::isValidInvoice($keyword)) {
-                $error = "Format nomor nota '{$keyword}' tidak sesuai standar. Contoh format yang benar: LG-261114-001.";
-                $errorType = 'invalid_format';
+            // Validasi format nomor nota standar LaundryGo (angka, contoh: 001)
+if (!Helper::isValidInvoice($keyword)) {
+    $error = "Format nomor nota '{$keyword}' tidak sesuai standar. Contoh format yang benar: 001.";
             } else {
                 // Pencarian exact hanya berdasarkan ID Invoice resmi (mencegah data leak dan SQL Injection)
                 $order = Pesanan::findWithDetails($keyword);

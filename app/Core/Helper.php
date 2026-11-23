@@ -152,30 +152,27 @@ class Helper {
     /**
      * Generate Invoice Nomor Pesanan (Format: LG-YYMMDD-XXX)
      */
-    public static function generateInvoice(): string {
-        $prefix = 'LG-' . date('ymd') . '-';
-        $sql = "SELECT id_pesanan FROM pesanan WHERE id_pesanan LIKE :prefix ORDER BY LENGTH(id_pesanan) DESC, id_pesanan DESC LIMIT 1";
-        $lastOrder = Database::fetch($sql, ['prefix' => $prefix . '%']);
+   /**
+ * Generate nomor nota sederhana (Format: 001, 002, 003, ...)
+ */
+public static function generateInvoice(): string {
+    $sql = "SELECT MAX(CAST(id_pesanan AS UNSIGNED)) AS terakhir
+            FROM pesanan WHERE id_pesanan REGEXP '^[0-9]+$'";
+    $last = Database::fetch($sql, []);
+    $nextNumber = (int)($last['terakhir'] ?? 0) + 1;
 
-        if ($lastOrder) {
-            $lastNumber = (int)substr($lastOrder['id_pesanan'], -3);
-            $nextNumber = $lastNumber + 1;
+    do {
+        $candidate = str_pad((string)$nextNumber, 3, '0', STR_PAD_LEFT);
+        $check = Database::fetch("SELECT 1 FROM pesanan WHERE id_pesanan = :id LIMIT 1", ['id' => $candidate]);
+        if ($check) {
+            $nextNumber++;
         } else {
-            $nextNumber = 1;
+            break;
         }
+    } while (true);
 
-        do {
-            $candidate = $prefix . str_pad((string)$nextNumber, 3, '0', STR_PAD_LEFT);
-            $check = Database::fetch("SELECT 1 FROM pesanan WHERE id_pesanan = :id LIMIT 1", ['id' => $candidate]);
-            if ($check) {
-                $nextNumber++;
-            } else {
-                break;
-            }
-        } while (true);
-
-        return $candidate;
-    }
+    return $candidate;
+}
 
     /**
      * Generate Sequential ID untuk Master Data (contoh: PEL-001, EXP-001)
@@ -239,11 +236,13 @@ class Helper {
     /**
      * Validasi format nomor nota LaundryGo (LG-YYMMDD-XXX atau LG-YYYYMMDD-XXX)
      */
-    public static function isValidInvoice(?string $invoice): bool {
-        if ($invoice === null) return false;
-        return (bool)preg_match('/^LG-[0-9]{6,8}-[0-9]{3,4}$/i', trim($invoice));
-    }
-
+   /**
+ * Validasi format nomor nota LaundryGo (angka saja, contoh: 001)
+ */
+public static function isValidInvoice(?string $invoice): bool {
+    if ($invoice === null) return false;
+    return (bool)preg_match('/^[0-9]{1,6}$/', trim($invoice));
+}
     /**
      * Validasi format username (alphanumeric & underscore, 3-30 karakter)
      */
