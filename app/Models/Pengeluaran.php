@@ -19,7 +19,7 @@ class Pengeluaran {
         }
 
         if ($bulan) {
-            $sql .= " AND DATE_FORMAT(p.tanggal_pengeluaran, '%Y-%m') = :bln";
+            $sql .= " AND TO_CHAR(p.tanggal_pengeluaran, '%Y-%m') = :bln";
             $params['bln'] = $bulan;
         }
 
@@ -76,7 +76,7 @@ class Pengeluaran {
     public static function getTotalBulanIni(): float {
         $sql = "SELECT COALESCE(SUM(jumlah), 0) AS total 
                 FROM pengeluaran 
-                WHERE DATE_FORMAT(tanggal_pengeluaran, '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m')";
+                WHERE TO_CHAR(tanggal_pengeluaran, '%Y-%m') = TO_CHAR(CURRENT_DATE, '%Y-%m')";
         $res = Database::fetch($sql);
         return (float)($res['total'] ?? 0);
     }

@@ -156,8 +156,8 @@ class Helper {
  * Generate nomor nota sederhana (Format: 001, 002, 003, ...)
  */
 public static function generateInvoice(): string {
-    $sql = "SELECT MAX(CAST(id_pesanan AS UNSIGNED)) AS terakhir
-            FROM pesanan WHERE id_pesanan REGEXP '^[0-9]+$'";
+    $sql = "SELECT MAX(CAST(id_pesanan AS INTEGER)) AS terakhir
+            FROM pesanan WHERE id_pesanan ~ '^[0-9]+$'";
     $last = Database::fetch($sql, []);
     $nextNumber = (int)($last['terakhir'] ?? 0) + 1;
 

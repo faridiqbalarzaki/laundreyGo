@@ -24,7 +24,7 @@ class Pelanggan {
 
     public static function search(string $keyword): array {
         $sql = "SELECT * FROM pelanggan 
-                WHERE nama_pelanggan LIKE :kw OR no_telepon LIKE :kw 
+                WHERE nama_pelanggan ILIKE :kw OR no_telepon ILIKE :kw 
                 ORDER BY nama_pelanggan ASC LIMIT 20";
         return Database::query($sql, ['kw' => '%' . $keyword . '%']);
     }

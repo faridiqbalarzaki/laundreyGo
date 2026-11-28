@@ -9,7 +9,7 @@ class Pesanan {
     public static function all(?string $status = null, ?string $keyword = null): array {
         $sql = "SELECT ps.*, p.nama_pelanggan, p.no_telepon, p.alamat, a.nama_anggota,
                 (SELECT COUNT(*) FROM detail_pesanan d WHERE d.id_pesanan = ps.id_pesanan) AS total_item,
-                (SELECT GROUP_CONCAT(l.nama_layanan SEPARATOR ', ') 
+                (SELECT STRING_AGG(l.nama_layanan, ', ') 
                  FROM detail_pesanan dp 
                  JOIN layanan l ON dp.id_layanan = l.id_layanan 
                  WHERE dp.id_pesanan = ps.id_pesanan) AS daftar_layanan,
@@ -29,7 +29,7 @@ class Pesanan {
         }
 
         if ($keyword) {
-            $sql .= " AND (ps.id_pesanan LIKE :kw OR p.nama_pelanggan LIKE :kw OR p.no_telepon LIKE :kw)";
+            $sql .= " AND (ps.id_pesanan ILIKE :kw OR p.nama_pelanggan ILIKE :kw OR p.no_telepon ILIKE :kw)";
             $params['kw'] = '%' . $keyword . '%';
         }
 
@@ -314,7 +314,7 @@ class Pesanan {
                 (SELECT l.nama_layanan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1) AS nama_layanan,
                 COALESCE((SELECT SUM(dp.jumlah) FROM detail_pesanan dp WHERE dp.id_pesanan = ps.id_pesanan), 1) AS total_berat,
                 COALESCE((SELECT l.satuan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1), 'kg') AS satuan,
-                (SELECT GROUP_CONCAT(CONCAT(l.nama_layanan, ' (', dp.jumlah, ' ', l.satuan, ')') SEPARATOR ', ') 
+                (SELECT STRING_AGG(CONCAT(l.nama_layanan, ' (', dp.jumlah, ' ', l.satuan, ')'), ', ')
                  FROM detail_pesanan dp 
                  JOIN layanan l ON dp.id_layanan = l.id_layanan 
                  WHERE dp.id_pesanan = ps.id_pesanan) AS rincian_item
@@ -343,7 +343,7 @@ class Pesanan {
 
         $sql = "SELECT ps.*, p.nama_pelanggan, p.no_telepon, p.alamat,
                 (SELECT mp.nama_metode FROM pembayaran pay JOIN metode_pembayaran mp ON pay.id_metode = mp.id_metode WHERE pay.id_pesanan = ps.id_pesanan ORDER BY pay.tanggal_pembayaran DESC LIMIT 1) AS metode_bayar,
-                (SELECT GROUP_CONCAT(l.nama_layanan SEPARATOR ', ') FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan) AS daftar_layanan,
+                (SELECT STRING_AGG(l.nama_layanan, ', ') FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan) AS daftar_layanan,
                 (SELECT l.nama_layanan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1) AS nama_layanan,
                 COALESCE((SELECT SUM(dp.jumlah) FROM detail_pesanan dp WHERE dp.id_pesanan = ps.id_pesanan), 1) AS total_berat,
                 COALESCE((SELECT l.satuan FROM detail_pesanan dp JOIN layanan l ON dp.id_layanan = l.id_layanan WHERE dp.id_pesanan = ps.id_pesanan LIMIT 1), 'kg') AS satuan
@@ -371,8 +371,10 @@ class Pesanan {
             $pdo = Database::getConnection();
             return (int)$pdo->query($sql)->fetchColumn();
         } catch (\Exception $e) {
-            return 0;
-        }
+    error_log('SIMPAN PESANAN: ' . $e->getMessage());   // <-- baris baru ini
+    $pdo->rollBack();      // baris lama, biarkan
+    return false;          // baris lama, biarkan
+}
     }
 
     /**
@@ -408,7 +410,7 @@ class Pesanan {
         // Omzet Kemarin (untuk komparasi pertumbuhan persentase)
         $sqlOmzetYesterday = "SELECT COALESCE(SUM(jumlah_bayar - uang_kembalian), 0) AS omzet_yesterday
                               FROM pembayaran
-                              WHERE DATE(tanggal_pembayaran) = DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY)";
+                              WHERE DATE(tanggal_pembayaran) = NOW() - INTERVAL '1 day'(CURRENT_DATE, INTERVAL 1 DAY)";
         $omzetYesterday = (float)(Database::fetch($sqlOmzetYesterday)['omzet_yesterday'] ?? 0);
 
         // Hitung persentase pertumbuhan omset
@@ -468,7 +470,7 @@ class Pesanan {
         // Ambil omset 14 hari
         $sqlOmset = "SELECT DATE(tanggal_pembayaran) AS tgl, SUM(jumlah_bayar - uang_kembalian) AS total
                      FROM pembayaran
-                     WHERE tanggal_pembayaran >= DATE_SUB(CURRENT_DATE, INTERVAL 14 DAY)
+                     WHERE tanggal_pembayaran >= NOW() - INTERVAL '1 day'(CURRENT_DATE, INTERVAL 14 DAY)
                      GROUP BY DATE(tanggal_pembayaran)";
         $resOmset = Database::query($sqlOmset);
         foreach ($resOmset as $row) {
@@ -481,7 +483,7 @@ class Pesanan {
         // Ambil pengeluaran 14 hari
         $sqlExp = "SELECT tanggal_pengeluaran AS tgl, SUM(jumlah) AS total
                    FROM pengeluaran
-                   WHERE tanggal_pengeluaran >= DATE_SUB(CURRENT_DATE, INTERVAL 14 DAY)
+                   WHERE tanggal_pengeluaran >= NOW() - INTERVAL '1 day'(CURRENT_DATE, INTERVAL 14 DAY)
                    GROUP BY tanggal_pengeluaran";
         $resExp = Database::query($sqlExp);
         foreach ($resExp as $row) {
